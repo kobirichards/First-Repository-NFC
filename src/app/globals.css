@@ -1,0 +1,81 @@
+@import "tailwindcss";
+@import "@fontsource-variable/schibsted-grotesk/wght.css";
+
+/*
+ * Tessera design tokens. Premium stationery: card stock, bottle-green ink,
+ * a small brass detail. Brass is decorative only (it fails contrast for small text).
+ */
+@theme {
+  --color-paper: #f5f6f3;
+  --color-sheet: #ffffff;
+  --color-ink: #14231e;
+  --color-bottle: #1f4d3f;
+  --color-bottle-deep: #163a2f;
+  --color-bottle-soft: #e3ece7;
+  --color-brass: #b38b3f;
+  --color-stone: #dce1dc;
+  --color-moss: #5b6b64;
+  --color-danger: #a1301f;
+  --color-danger-soft: #f8e7e3;
+  --color-ok-soft: #e3ece7;
+
+  --font-sans: "Schibsted Grotesk Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* 1.25 type scale */
+  --text-xs: 0.8rem;
+  --text-sm: 0.9rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.563rem;
+  --text-2xl: 1.953rem;
+  --text-3xl: 2.441rem;
+  --text-4xl: 3.052rem;
+  --text-5xl: 3.815rem;
+
+  --radius-control: 0.375rem;
+  --radius-card: 0.875rem;
+
+  --shadow-card: 0 1px 0 rgb(20 35 30 / 0.04), 0 18px 40px -24px rgb(20 35 30 / 0.45);
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01";
+}
+
+::selection {
+  background: var(--color-bottle);
+  color: #fff;
+}
+
+/* One visible, consistent focus style everywhere. */
+:focus-visible {
+  outline: 2px solid var(--color-bottle);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.measure {
+  max-width: 68ch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
