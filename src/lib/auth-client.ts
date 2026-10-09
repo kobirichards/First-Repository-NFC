@@ -1,7 +1,7 @@
 "use client";
-import { adminClient, magicLinkClient, twoFactorClient } from "better-auth/client/plugins";
+import { inferAdditionalFields, magicLinkClient, twoFactorClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
 export const authClient = createAuthClient({
-  plugins: [magicLinkClient(), twoFactorClient(), adminClient()],
+  plugins: [magicLinkClient(), twoFactorClient(), inferAdditionalFields({ user: { role: { type: "string", required: false, input: false } } })],
 });

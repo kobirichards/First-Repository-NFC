@@ -2,13 +2,14 @@ import "server-only";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
-import { admin, magicLink, twoFactor } from "better-auth/plugins";
+import { eq } from "drizzle-orm";
+import { magicLink, twoFactor } from "better-auth/plugins";
 import { brand } from "@/config/brand";
 import { env } from "@/config/env";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
 import { sendEmail } from "@/server/email";
-import { changeEmailMessage, magicLinkMessage, resetPasswordMessage, verifyEmailMessage } from "@/server/email/templates";
+import { adminMagicLinkRefusedMessage, changeEmailMessage, magicLinkMessage, resetPasswordMessage, verifyEmailMessage } from "@/server/email/templates";
 import { prepareAccountDeletion } from "@/server/account";
 
 /** Relaxed limits are only honoured when APP_ENV=test (the e2e suite). */
@@ -56,6 +57,11 @@ export const auth = betterAuth({
     sendVerificationEmail: async ({ user, url }) => deliver(verifyEmailMessage(user.email, url)),
   },
   user: {
+    additionalFields: {
+      // "user" or "admin". Never settable from sign-up or profile updates (input: false);
+      // admins are created with `npm run admin:create`.
+      role: { type: "string", required: false, defaultValue: "user", input: false },
+    },
     changeEmail: {
       enabled: true,
       // Approve from the old address first; Better Auth then verifies the new address.
@@ -95,10 +101,16 @@ export const auth = betterAuth({
       expiresIn: 60 * 10,
       // Magic links sign existing users in; new accounts go through sign-up + verification.
       disableSignUp: true,
-      sendMagicLink: async ({ email, url }) => deliver(magicLinkMessage(email, url)),
+      sendMagicLink: async ({ email, url }) => {
+        // Admins must sign in with password + authenticator code; a magic link would skip the second step.
+        const account = await db.query.user.findFirst({ where: eq(schema.user.email, email.toLowerCase()), columns: { role: true } });
+        if (account?.role === "admin") return deliver(adminMagicLinkRefusedMessage(email));
+        deliver(magicLinkMessage(email, url));
+      },
     }),
     twoFactor({ issuer: brand.name }),
-    admin({ defaultRole: "user", adminRoles: ["admin"] }),
+    // No Better Auth "admin" plugin: its HTTP endpoints (set role, ban, impersonate…)
+    // would bypass our MFA check and audit log. Admin work goes through src/server/admin.
     nextCookies(), // must be last
   ],
 });

@@ -146,3 +146,29 @@ export function enquiryNotificationMessage(to: string, enquiry: { company?: stri
     text: `${heading}\n\n${body}`,
   };
 }
+
+export function adminMagicLinkRefusedMessage(to: string) {
+  const heading = "Sign in with your password";
+  const body = `Someone asked for a sign-in link for this ${brand.name} admin account. Admin accounts can't use email links: sign in with your password and authenticator code instead.`;
+  const footnote = "If you didn't ask for this, you can ignore this email.";
+  return {
+    to,
+    tag: "magic-link-refused",
+    subject: `${brand.name} sign-in`,
+    html: `<!doctype html><html><body style="font-family:Arial,Helvetica,sans-serif;color:#14231E"><h1 style="font-size:20px">${escapeHtml(heading)}</h1><p>${escapeHtml(body)}</p><p style="color:#5B6B64;font-size:13px">${escapeHtml(footnote)}</p></body></html>`,
+    text: `${heading}\n\n${body}\n\n${footnote}`,
+  };
+}
+
+export function orderStatusMessage(to: string, reference: string, heading: string, body: string, url: string | null) {
+  const footnote = `Order ${reference}`;
+  return {
+    to,
+    tag: "order-update",
+    subject: `${heading}: order ${reference}`,
+    html: url
+      ? layout(heading, body, { label: "View your order", url }, footnote)
+      : `<!doctype html><html><body style="font-family:Arial,Helvetica,sans-serif;color:#14231E"><h1 style="font-size:20px">${escapeHtml(heading)}</h1><p>${escapeHtml(body)}</p><p style="color:#5B6B64;font-size:13px">${escapeHtml(footnote)}</p></body></html>`,
+    text: `${heading}\n\n${body}${url ? `\n\n${url}` : ""}\n\n${footnote}`,
+  };
+}

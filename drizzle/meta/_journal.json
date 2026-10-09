@@ -15,6 +15,13 @@
       "when": 1791543028591,
       "tag": "0001_checkout_session",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791544383405,
+      "tag": "0002_proof_file_optional",
+      "breakpoints": true
     }
   ]
 }

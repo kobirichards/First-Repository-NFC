@@ -1,4 +1,6 @@
+import { createHmac } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
+import { hashPassword } from "better-auth/crypto";
 import path from "node:path";
 import { expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
@@ -70,4 +72,40 @@ export async function signUpAndVerify(page: Page, name: string, prefix = "user")
   await page.goto(firstLink(await waitForEmail(email, "verify-email")));
   await expect(page.getByText("Email confirmed")).toBeVisible();
   return email;
+}
+
+/** RFC 6238 TOTP (SHA-1, 30 s, 6 digits), for signing in as an admin in tests. */
+export function totp(base32Secret: string, at = Date.now()): string {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  const clean = base32Secret.replace(/=+$/, "").toUpperCase();
+  let bits = "";
+  for (const ch of clean) bits += alphabet.indexOf(ch).toString(2).padStart(5, "0");
+  const key = Buffer.from(bits.match(/.{8}/g)!.map((b) => parseInt(b, 2)));
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(at / 1000 / 30)));
+  const hmac = createHmac("sha1", key).update(counter).digest();
+  const offset = hmac[hmac.length - 1] & 0xf;
+  const code = (hmac.readUInt32BE(offset) & 0x7fffffff) % 1_000_000;
+  return code.toString().padStart(6, "0");
+}
+
+/** A verified admin account with a password and no two-step verification yet (as `npm run admin:create` makes). */
+export async function createAdminAccount() {
+  const email = uniqueEmail("admin");
+  const id = crypto.randomUUID();
+  await query('INSERT INTO "user" (id, name, email, email_verified, role) VALUES ($1, $2, $3, true, $4)', [id, "Ada Admin", email, "admin"]);
+  await query("INSERT INTO account (id, account_id, provider_id, user_id, password) VALUES ($1, $2, 'credential', $2, $3)", [
+    crypto.randomUUID(),
+    id,
+    await hashPassword(PASSWORD),
+  ]);
+  return { id, email };
+}
+
+export async function signIn(page: Page, email: string, password = PASSWORD) {
+  await page.goto("/sign-in");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(password);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.waitForURL((url) => !url.pathname.startsWith("/sign-in"));
 }

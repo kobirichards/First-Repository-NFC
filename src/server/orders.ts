@@ -148,8 +148,10 @@ async function fulfilFromSnapshot(
         customisation: line.customisation,
       })
       .returning({ id: orderItem.id });
-    if (line.customisation?.artworkKey) {
-      await tx.insert(artworkProof).values({ orderItemId: item.id, fileKey: line.customisation.artworkKey });
+    const c = line.customisation;
+    if (c && (c.artworkKey || c.printName || c.printTitle)) {
+      // Every customised line needs a proof approved before printing, logo or not.
+      await tx.insert(artworkProof).values({ orderItemId: item.id, fileKey: c.artworkKey ?? null });
     }
     if (line.optionId) {
       // Tracked stock only (inventory not null); never below zero.

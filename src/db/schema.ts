@@ -406,7 +406,8 @@ export const artworkProof = pgTable(
     orderItemId: text()
       .notNull()
       .references(() => orderItem.id, { onDelete: "cascade" }),
-    fileKey: text().notNull(),
+    /** Uploaded logo, if any. Text-only customisations (name/title) have none but still need approval. */
+    fileKey: text(),
     status: proofStatus().notNull().default("PENDING"),
     reviewNotes: text(),
     reviewedById: text().references(() => user.id, { onDelete: "set null" }),
@@ -523,6 +524,7 @@ export const userRelations = relations(user, ({ one, many }) => ({
   profile: one(profile, { fields: [user.id], references: [profile.userId] }),
   cards: many(card),
   orders: many(order),
+  auditEvents: many(auditEvent),
 }));
 
 export const profileRelations = relations(profile, ({ one, many }) => ({
@@ -542,8 +544,9 @@ export const cardAssignmentRelations = relations(cardAssignment, ({ one }) => ({
   card: one(card, { fields: [cardAssignment.cardId], references: [card.id] }),
 }));
 
-export const cardBatchRelations = relations(cardBatch, ({ many }) => ({
+export const cardBatchRelations = relations(cardBatch, ({ one, many }) => ({
   cards: many(card),
+  createdBy: one(user, { fields: [cardBatch.createdById], references: [user.id] }),
 }));
 
 export const productRelations = relations(product, ({ many }) => ({
@@ -585,6 +588,10 @@ export const orderItemRelations = relations(orderItem, ({ one, many }) => ({
 
 export const refundRelations = relations(refund, ({ one }) => ({
   order: one(order, { fields: [refund.orderId], references: [order.id] }),
+}));
+
+export const auditEventRelations = relations(auditEvent, ({ one }) => ({
+  actor: one(user, { fields: [auditEvent.actorId], references: [user.id] }),
 }));
 
 export const checkoutSessionRelations = relations(checkoutSession, ({ one }) => ({

@@ -1,0 +1,1 @@
+ALTER TABLE "artwork_proof" ALTER COLUMN "file_key" DROP NOT NULL;

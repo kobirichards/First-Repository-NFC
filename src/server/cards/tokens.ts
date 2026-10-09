@@ -2,7 +2,12 @@ import { createHmac, randomBytes, randomInt, timingSafeEqual } from "node:crypto
 
 /** 16 random bytes → 22-character base64url token (128 bits). Written to the chip; never changes. */
 export function generateCardToken(): string {
-  return randomBytes(16).toString("base64url");
+  // Re-roll the rare token that starts with "-" or "_": spreadsheets can treat a
+  // leading "-" as a formula, and printers work from CSV exports.
+  for (;;) {
+    const token = randomBytes(16).toString("base64url");
+    if (/^[A-Za-z0-9]/.test(token)) return token;
+  }
 }
 
 export function isWellFormedCardToken(token: string): boolean {

@@ -1,14 +1,70 @@
 # Status
 
-_Last updated: Milestone 3 complete._
+_Last updated: Milestone 4 complete._
 
 | Milestone | State |
 |---|---|
 | 1. Foundation | ✅ Done |
 | 2. Cards and profiles | ✅ Done |
 | 3. Storefront and checkout | ✅ Done (real Stripe untested: no keys yet) |
-| 4. Admin and fulfilment | Not started |
+| 4. Admin and fulfilment | ✅ Done |
 | 5. Polish and launch prep | Not started |
+
+## Milestone 4: Admin and fulfilment
+
+### Built
+
+- **Access control in three layers:**
+  - the proxy (real 404 for non-admins; signed-out visitors sent to sign in; admins without two-step verification sent to set it up)
+  - `requireAdmin()` at the start of every admin page and server action
+  - `assertAdmin()` at the start of every admin data function
+
+  Admin means role `admin` **and** two-step verification switched on. The Better Auth "admin" plugin was removed so none of its HTTP endpoints (set role, ban, impersonate) can bypass these checks; `role` is now a server-only user field.
+- **Admin accounts**: `npm run admin:create` creates or promotes one, with a one-time temporary password, and logs it in the audit log. Authenticator-app set-up has a QR code, a manual key, backup codes and a confirmation step. Every admin sign-in then needs a code. Email sign-in links are refused for admins with a safe explanatory email, because they would skip the code.
+- **Card batches**: create up to 1,000 cards. The CSV for the printer (token, URL, claim code, QR filename) downloads once and is the only copy of the codes. There's a QR zip per batch (one SVG per card plus a CSV without codes), and **New claim codes** recovers a lost CSV before printing. CSV cells are protected against spreadsheet formula injection, and tokens never start with `-` or `_`.
+- **Orders**: filter by status; view items, customisation, proof status, totals, delivery address and history. Change status and tracking number, with optional customer emails for in production, shipped and cancelled. Record refunds (capped at the order total; Stripe refund ID checked). **Assign cards** by pasting card URLs or tokens, or take them from stock. Cards are activated straight away for account orders; guest buyers claim them with the printed code.
+- **Proofs**: every customised line (logo, name or title) needs approval. The queue shows the logo (served only to admins), name and title. Approve, or ask for a change (a reason is required and is emailed to the customer). When all of an order's proofs are approved, it moves to "In production" and the customer is emailed.
+- **Cards**: search by URL, token or owner email. Detail page with owner, destination, batch, order and assignment history. Disable, reactivate, reassign to another customer by email, or return to stock with a **new** claim code (shown once).
+- **Products**: create and edit products and finishes (code, description, stock, on sale), and set prices per currency for the product and per finish. Blank means not sold in that currency.
+- **Customers** (search and detail), **Enquiries** (inbox with status), and an **Audit log** showing who, what, when and before/after for every admin change.
+- **`docs/nfc-programming.md`**: chip choice (NTAG215/216; on-metal inlays for steel), writing one NDEF URI record with NXP TagWriter, an iPhone/Android/QR verification checklist, locking, packaging, fulfilment and troubleshooting.
+- Migration `0002`: proof files are optional, for text-only customisation.
+
+### Tested
+
+- `npm run lint`, `npm run typecheck`, `npm run build`: pass.
+- Unit (73 in total): CSV formula-injection escaping; a check that **every** admin server action starts with `requireAdmin()`.
+- Integration (44 in total, 17 new):
+  - **every registered admin operation (29) rejects** signed-out visitors, customers, users with no role, and admins without two-step verification
+  - a further check fails if a new admin function is exported without being registered, so it can't escape the authorization test
+  - batches: codes exist only in the CSV and work for claiming; silly quantities rejected; regenerating codes kills the old ones; the QR zip has no codes
+  - orders: account orders activate their cards; guest orders link without activating; claimed cards are refused
+  - cards: disable, reassign and release (old code dead, new one works), each audited with before/after
+  - refunds capped at the order total, and the status updates
+  - proofs: production starts only when all are approved; rejections need a reason
+  - price changes appear in the shop
+- End-to-end (20 in total, 4 new):
+  - signed-out → sign-in; a customer gets a **404 status** on all 10 admin pages and both admin file routes
+  - admin must enrol two-step verification (real TOTP codes), then needs a code at sign-in; email links refused
+  - full fulfilment:
+    - create batch → CSV download (verified header and rows) → QR zip
+    - customer buys 2 printed cards → admin approves the proof → "Your design is approved" email → order in production
+    - assign 2 cards from stock → they appear in the customer's account
+    - ship with tracking → email contains the tracking number
+    - disable a card → it resolves to "not active"
+    - all five actions appear in the audit log under the admin's email
+  - an admin price change shows in the shop
+
+### Simulated or untested
+
+- Writing NFC chips is manual by design (see the doc). It hasn't been tried with physical cards.
+- Refunds are recorded, not issued: money moves in the Stripe dashboard. The `charge.refunded` webhook isn't handled yet.
+- Admin emails (proof decisions, shipping) go through the email boundary, so they're untested with Resend, as in earlier milestones.
+
+### Known gaps and follow-ups
+
+- No admin UI to remove an admin's role or reset another admin's two-step verification (use the database or extend the CLI). Backup codes are the self-service recovery route.
+- Messages for admin forms that disappear after success (for example, an approved proof leaving the queue) aren't shown; the page itself shows the new state.
 
 ## Milestone 3: Storefront and checkout
 

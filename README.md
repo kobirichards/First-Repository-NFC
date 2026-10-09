@@ -75,6 +75,7 @@ See [`.env.example`](.env.example) for the full list with comments. The importan
 | `npm run db:generate` | Creates a migration from changes to `src/db/schema.ts` |
 | `npm run db:migrate` | Applies migrations |
 | `npm run db:seed` | Seeds demo data |
+| `npm run admin:create -- --email … --name …` | Creates (or promotes) an admin account |
 
 ### Integration tests
 
@@ -118,6 +119,27 @@ Target: Vercel (or any Node host) plus managed Postgres (e.g. Neon). Not deploye
 5. Register `CARD_DOMAIN` for the long term, with auto-renew. See `docs/launch-checklist.md` (Milestone 5).
 
 6. Set `PAYMENTS_PROVIDER=stripe`, live keys, and a webhook endpoint at `https://YOUR_DOMAIN/api/webhooks/stripe` (see below).
+
+## Admin area
+
+`/admin` is for staff. To get in you need:
+
+1. **An admin account.** Create the first one from the command line (there's no public sign-up for admins):
+   ```bash
+   npm run admin:create -- --email you@company.com --name "Your Name"
+   ```
+   This prints a temporary password once. Running it with an existing customer's email promotes that account instead.
+2. **Two-step verification.** On first visit, `/admin` sends you to set up an authenticator app. Nothing else in admin works until that's done, and every later sign-in needs a code. Admin accounts can't use email sign-in links.
+
+Access is checked in three places:
+
+- the proxy, which gives a real 404 to non-admins and handles the set-up redirect
+- every admin page and server action, through `requireAdmin()`
+- every admin data function, through `assertAdmin()`
+
+Every change is recorded in **Admin → Audit log** with who made it and the before/after values.
+
+Writing NFC chips is manual: see [`docs/nfc-programming.md`](docs/nfc-programming.md).
 
 ## Stripe test mode
 

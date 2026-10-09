@@ -162,7 +162,7 @@ async function main() {
 
   console.info("\nSeed complete.\n");
   console.info(`  Demo customer  demo@example.com   / ${DEMO_PASSWORD}`);
-  console.info(`  Demo admin     admin@example.com  / ${DEMO_PASSWORD}  (MFA setup will be required from Milestone 4)`);
+  console.info(`  Demo admin     admin@example.com  / ${DEMO_PASSWORD}  (you must set up two-step verification on first visit to /admin)`);
   if (cards.length) {
     console.info("\n  Cards (claim codes are only shown now):");
     for (const c of cards) console.info(`    ${c.state.padEnd(22)} ${c.url}   claim code ${c.claimCode}`);
