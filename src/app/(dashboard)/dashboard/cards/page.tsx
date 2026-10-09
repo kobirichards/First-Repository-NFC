@@ -4,6 +4,7 @@ import { CardControls } from "@/components/dashboard/card-controls";
 import { ButtonLink } from "@/components/ui/button";
 import { Notice } from "@/components/ui/notice";
 import { safeExternalUrl } from "@/lib/urls";
+import { analyticsEnabled, tapTotals } from "@/server/analytics";
 import { listOwnCards } from "@/server/cards";
 import { cardUrl } from "@/server/links";
 import { getOwnProfile } from "@/server/profiles";
@@ -15,6 +16,8 @@ async function Cards({ searchParams }: { searchParams: PageProps<"/dashboard/car
   const user = await requireUser("/dashboard/cards");
   const [cards, profile, params] = await Promise.all([listOwnCards(user.id), getOwnProfile(user.id), searchParams]);
   const hasLinkedIn = Boolean(safeExternalUrl(profile?.linkedinUrl));
+  // Only this user's card ids are passed in, so only their counts can come back.
+  const taps = analyticsEnabled() ? await tapTotals(cards.map((c) => c.id)) : null;
 
   return (
     <div className="flex flex-col gap-8">
@@ -48,7 +51,14 @@ async function Cards({ searchParams }: { searchParams: PageProps<"/dashboard/car
             <CardControls
               key={card.id}
               hasLinkedIn={hasLinkedIn}
-              card={{ id: card.id, label: card.label, status: card.status, destination: card.destination, url: cardUrl(card.token) }}
+              card={{
+                id: card.id,
+                label: card.label,
+                status: card.status,
+                destination: card.destination,
+                url: cardUrl(card.token),
+                taps: taps ? (taps[card.id] ?? 0) : null,
+              }}
             />
           ))}
         </ul>

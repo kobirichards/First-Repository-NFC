@@ -146,9 +146,17 @@ export function toPublicProfile(p: OwnProfile): PublicProfile {
 
 /** Published profiles only. Returns null for unknown and unpublished slugs alike. */
 export async function getPublicProfileBySlug(slug: string, db: Db = defaultDb): Promise<PublicProfile | null> {
+  return (await getPublicProfileEntry(slug, db))?.profile ?? null;
+}
+
+/**
+ * The public view plus the internal id, for server-side use only (counting
+ * views). Keep the id out of anything rendered or sent to the browser.
+ */
+export async function getPublicProfileEntry(slug: string, db: Db = defaultDb): Promise<{ id: string; profile: PublicProfile } | null> {
   if (!/^[a-z0-9-]{1,40}$/.test(slug)) return null;
   const row = await db.query.profile.findFirst({ where: and(eq(profile.slug, slug), eq(profile.isPublished, true)) });
-  return row ? toPublicProfile(row) : null;
+  return row ? { id: row.id, profile: toPublicProfile(row) } : null;
 }
 
 /** Cheap existence check used by the proxy to return a real 404 before the page streams. */

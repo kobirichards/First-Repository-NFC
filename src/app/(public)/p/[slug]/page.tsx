@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { ProfileView } from "@/components/profile/profile-view";
 import { ShareButton } from "@/components/profile/share-button";
+import { recordView } from "@/server/analytics";
 import { photoUrl, profileUrl } from "@/server/links";
-import { getPublicProfileBySlug } from "@/server/profiles";
+import { getPublicProfileBySlug, getPublicProfileEntry } from "@/server/profiles";
 import { qrSvg } from "@/server/qr";
 
 export async function generateMetadata(props: PageProps<"/p/[slug]">): Promise<Metadata> {
@@ -29,8 +32,11 @@ export const instant = false;
 
 export default async function PublicProfilePage(props: PageProps<"/p/[slug]">) {
   const { slug } = await props.params;
-  const profile = await getPublicProfileBySlug(slug);
-  if (!profile) notFound();
+  const entry = await getPublicProfileEntry(slug);
+  if (!entry) notFound();
+  const { profile, id: profileId } = entry;
+  const ua = (await headers()).get("user-agent");
+  after(() => recordView(profileId, ua));
   const url = profileUrl(profile.slug);
   const svg = await qrSvg(url);
 

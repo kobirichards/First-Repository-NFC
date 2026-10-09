@@ -22,7 +22,8 @@ export default defineConfig({
   },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
-    { name: "mobile", use: { ...devices["Pixel 7"] }, testMatch: /mobile\.spec\.ts/ },
+    // Accessibility checks also run at phone size.
+    { name: "mobile", use: { ...devices["Pixel 7"] }, testMatch: /a11y\.spec\.ts/ },
   ],
   webServer: {
     command: `npx next start -p ${PORT}`,

@@ -11,6 +11,8 @@ export type CardRow = {
   status: "UNCLAIMED" | "ACTIVE" | "DEACTIVATED";
   destination: "PROFILE" | "LINKEDIN";
   url: string;
+  /** Taps in the last 30 days, or null when analytics is off. */
+  taps: number | null;
 };
 
 function Feedback({ state }: { state: ActionState }) {
@@ -45,6 +47,11 @@ export function CardControls({ card, hasLinkedIn }: { card: CardRow; hasLinkedIn
           <p className="mt-1 truncate text-sm text-moss" title={card.url}>
             {card.url}
           </p>
+          {card.taps !== null ? (
+            <p className="mt-1 text-sm text-moss">
+              {card.taps} {card.taps === 1 ? "tap" : "taps"} in the last 30 days
+            </p>
+          ) : null}
         </div>
         <div className="flex shrink-0 gap-2">
           <a href={`/api/cards/${card.id}/qr?format=svg`} className="text-sm font-semibold text-bottle underline-offset-4 hover:underline">

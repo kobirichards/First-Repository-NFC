@@ -6,7 +6,9 @@ A storefront and web app for selling NFC business cards. Each card stores a perm
 
 - Build brief: [`docs/brief.md`](docs/brief.md)
 - Architecture, data model and assumptions: [`PLAN.md`](PLAN.md)
-- Progress, what's tested and what isn't: [`STATUS.md`](STATUS.md)
+- Progress, what's tested, and the **open issues to fix**: [`STATUS.md`](STATUS.md)
+- Before launch: [`docs/launch-checklist.md`](docs/launch-checklist.md)
+- Writing NFC chips: [`docs/nfc-programming.md`](docs/nfc-programming.md)
 
 ## Stack
 
@@ -55,6 +57,7 @@ See [`.env.example`](.env.example) for the full list with comments. The importan
 | `BETTER_AUTH_SECRET` | Signs sessions and tokens. |
 | `CLAIM_CODE_SECRET` | HMAC key for card claim codes. Changing it invalidates all unclaimed codes. |
 | `EMAIL_PROVIDER` | `console` (development) or `resend` (needs `RESEND_API_KEY` and a verified domain). |
+| `ANALYTICS_ENABLED` | `true` turns on daily tap/view totals (no visitor identifiers). Off by default. |
 | `STORAGE_PROVIDER` | `local` (writes to `./.uploads`) or `s3` (any S3-compatible bucket such as R2; keep it private, since files are served through the app). |
 | `UPSTASH_REDIS_REST_URL` / `_TOKEN` | Shared rate limiting in production. Without them the limiter is in-memory, per server. |
 | `PAYMENTS_PROVIDER` | `stripe` or `simulated` (see Stripe test mode). |
@@ -76,6 +79,7 @@ See [`.env.example`](.env.example) for the full list with comments. The importan
 | `npm run db:migrate` | Applies migrations |
 | `npm run db:seed` | Seeds demo data |
 | `npm run admin:create -- --email … --name …` | Creates (or promotes) an admin account |
+| `npm run cleanup` | Daily housekeeping: stale checkouts, abandoned baskets, orphaned uploads |
 
 ### Integration tests
 
@@ -112,7 +116,7 @@ tests/e2e/           Playwright
 
 Target: Vercel (or any Node host) plus managed Postgres (e.g. Neon). Not deployed yet.
 
-1. Create the database and set every variable from `.env.example` (production values, `https`).
+1. Create the database and set every variable from `.env.example` (production values, `https`). Set `APP_URL` for the **build** too: robots.txt, the social image URL and page metadata are generated at build time.
 2. Run `npm run db:migrate` against the production database as a release step.
 3. Set `EMAIL_PROVIDER=resend` with a verified sending domain. The console sender refuses to run in production.
 4. Never set `APP_ENV=test`, and never run `db:seed`, in production.

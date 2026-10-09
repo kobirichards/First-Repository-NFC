@@ -18,6 +18,21 @@ const steps = [
   },
 ];
 
+const uses = [
+  {
+    title: "Conferences",
+    body: "Swap details in the queue for coffee without hunting for a pen. Your profile opens on their phone, and they save you in one tap.",
+  },
+  {
+    title: "Trade show stands",
+    body: "Give the stand its own card that opens a shared profile for whoever's on duty, or your company's LinkedIn page.",
+  },
+  {
+    title: "Whole teams",
+    body: "Everyone gets a card in your colours. When someone changes role, they update their profile. No reprint, no waste.",
+  },
+];
+
 const faqs = [
   {
     q: "Which phones can read the card?",
@@ -75,6 +90,39 @@ export default function HomePage() {
               </li>
             ))}
           </ol>
+        </Container>
+      </section>
+
+      <section aria-labelledby="uses">
+        <Container className="py-16 md:py-20">
+          <h2 id="uses" className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Made for the moments you meet people
+          </h2>
+          <div className="mt-10 grid gap-x-12 gap-y-8 md:grid-cols-3">
+            {uses.map((u) => (
+              <div key={u.title}>
+                <h3 className="text-lg font-semibold">{u.title}</h3>
+                <p className="mt-2 leading-relaxed text-moss">{u.body}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-10">
+            <ButtonLink href="/teams" variant="secondary">
+              Get a quote for your team
+            </ButtonLink>
+          </div>
+        </Container>
+      </section>
+
+      <section aria-labelledby="stories" className="border-y border-stone bg-sheet">
+        <Container className="py-16">
+          <h2 id="stories" className="text-2xl font-bold tracking-tight sm:text-3xl">
+            What customers say
+          </h2>
+          <div className="mt-6 rounded-card border-2 border-dashed border-stone p-8 text-moss">
+            <p className="font-semibold text-ink">Placeholder</p>
+            <p className="mt-1">Real customer quotes will appear here once customers have given permission to use them. We don&apos;t publish invented reviews.</p>
+          </div>
         </Container>
       </section>
 

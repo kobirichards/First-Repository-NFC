@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { SignOutButton } from "@/components/dashboard/sign-out-button";
 import { ButtonLink } from "@/components/ui/button";
+import { analyticsEnabled, viewTotal } from "@/server/analytics";
 import { listOwnCards } from "@/server/cards";
 import { getOwnProfile } from "@/server/profiles";
 import { requireUser } from "@/server/session";
@@ -14,6 +15,7 @@ async function Overview() {
   const [profile, cards] = await Promise.all([getOwnProfile(user.id), listOwnCards(user.id)]);
   const firstName = user.name.split(" ")[0];
   const active = cards.filter((c) => c.status === "ACTIVE").length;
+  const views = analyticsEnabled() && profile ? await viewTotal(profile.id) : null;
 
   return (
     <div className="flex flex-col gap-10">
@@ -36,7 +38,7 @@ async function Overview() {
             {!profile
               ? "Set up the page your cards open: your role, company, LinkedIn and how to reach you."
               : profile.isPublished
-                ? "Your profile is live."
+                ? `Your profile is live.${views !== null ? ` ${views} ${views === 1 ? "view" : "views"} in the last 30 days.` : ""}`
                 : "Your profile is a draft. Publish it so your cards have somewhere to go."}
           </p>
           <div className="mt-5 flex flex-wrap items-center gap-4">

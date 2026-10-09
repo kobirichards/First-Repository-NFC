@@ -189,3 +189,31 @@ describe("public profile view", () => {
     await expect(setOwnProfilePublished(u.id, true, false)).rejects.toThrow(/Confirm your email/);
   });
 });
+
+describe("analytics", () => {
+  it("only counts when enabled, stores daily totals without identifiers, and skips bots", async () => {
+    const { recordTap, recordView, tapTotals, viewTotal } = await import("@/server/analytics");
+    const u = await makeUser("Counted");
+    const c = await makeUnclaimedCard();
+    const { cardId } = await claimCard(u, c.token, c.code, SECRET);
+    const p = await getOwnProfile(u.id);
+
+    delete process.env.ANALYTICS_ENABLED;
+    await recordTap(cardId, "Mozilla/5.0 (iPhone)");
+    expect(await tapTotals([cardId])).toEqual({});
+
+    process.env.ANALYTICS_ENABLED = "true";
+    await recordTap(cardId, "Mozilla/5.0 (iPhone)");
+    await recordTap(cardId, "Mozilla/5.0 (Android)");
+    await recordTap(cardId, "Googlebot/2.1");
+    await recordView(p!.id, "Mozilla/5.0");
+    expect(await tapTotals([cardId])).toEqual({ [cardId]: 2 });
+    expect(await viewTotal(p!.id)).toBe(1);
+
+    const { dailyStat } = await import("@/db/schema");
+    const rows = await db.select().from(dailyStat).where(eq(dailyStat.cardId, cardId));
+    expect(rows).toHaveLength(1); // one row per card per day
+    expect(Object.keys(rows[0]).sort()).toEqual(["cardId", "count", "day", "id", "kind", "profileId"]);
+    delete process.env.ANALYTICS_ENABLED;
+  });
+});

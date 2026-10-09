@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { brand } from "@/config/brand";
 import { db } from "@/db";
 import { enquiry } from "@/db/schema";
+import { contactSchema } from "@/lib/validation/contact";
 import { enquirySchema } from "@/lib/validation/enquiry";
 import { sendEmail } from "@/server/email";
 import { enquiryNotificationMessage } from "@/server/email/templates";
@@ -34,6 +35,26 @@ export async function submitEnquiryAction(_prev: ActionState, formData: FormData
       console.error("[enquiry] notification failed:", e instanceof Error ? e.message : e),
     );
     return { ok: true, message: "Thanks. We'll be in touch within one working day." };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+export async function submitContactAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    if (!(await checkLimit("formPerClient", clientKey(await headers()))).ok) {
+      return { ok: false, message: "You've sent several messages already. Wait a few minutes, or email us directly." };
+    }
+    const raw = Object.fromEntries(formData);
+    if (typeof raw.website === "string" && raw.website.length > 0) return { ok: true, message: "Thanks. We'll reply within one working day." };
+    const input = contactSchema.parse(raw);
+    const message = input.orderReference ? `Order: ${input.orderReference}\n\n${input.message}` : input.message;
+    await db.insert(enquiry).values({ kind: "contact", name: input.name, email: input.email, message });
+    const notify = process.env.ENQUIRY_NOTIFY_EMAIL ?? brand.supportEmail;
+    void sendEmail(enquiryNotificationMessage(notify, { name: input.name, email: input.email, message })).catch((e: unknown) =>
+      console.error("[contact] notification failed:", e instanceof Error ? e.message : e),
+    );
+    return { ok: true, message: "Thanks. We'll reply within one working day." };
   } catch (error) {
     return toActionError(error);
   }

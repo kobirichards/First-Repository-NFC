@@ -1,6 +1,6 @@
 # Status
 
-_Last updated: Milestone 4 complete._
+_Last updated: all five milestones complete._
 
 | Milestone | State |
 |---|---|
@@ -8,7 +8,79 @@ _Last updated: Milestone 4 complete._
 | 2. Cards and profiles | ✅ Done |
 | 3. Storefront and checkout | ✅ Done (real Stripe untested: no keys yet) |
 | 4. Admin and fulfilment | ✅ Done |
-| 5. Polish and launch prep | Not started |
+| 5. Polish and launch prep | ✅ Done |
+
+## Open issues to fix
+
+Everything known to be missing, untested or wrong, in rough order of importance. Each item says what is needed to close it.
+
+| # | Issue | Type | What's needed |
+|---|---|---|---|
+| 1 | **Real Stripe Checkout has never been run.** Purchases are tested end to end only with the simulated provider; the Stripe API call and hosted page are untested. | Untested integration | Stripe test keys → follow README "Stripe test mode" → one purchase with card 4242 → confirm the order appears via the webhook. |
+| 2 | **Stripe Tax is off.** No tax is calculated at checkout; UK/EU prices are assumed VAT-inclusive. | Configuration | Tax registrations in Stripe, then `STRIPE_TAX_ENABLED=true` and a test purchase per region. |
+| 3 | **Brand name "Tessera" is a placeholder**, and is likely to clash with existing trademarks. | Decision | Choose a name; change `src/config/brand.ts`; run a trademark search. |
+| 4 | **Email (Resend) is untested.** Development emails are written to `.mail-outbox/`. | Untested integration | `RESEND_API_KEY` + verified domain (SPF/DKIM/DMARC); send a test of each email type. |
+| 5 | **S3/R2 photo and logo storage is untested.** Development uses local disk. | Untested integration | A private bucket and `S3_*` variables; upload a photo and logo, run `npm run cleanup`. |
+| 6 | **Shared rate limiting (Upstash) is untested.** Without it, limits are per server instance. | Untested integration | `UPSTASH_REDIS_REST_*`; check a 429 after repeated claim attempts. |
+| 7 | **Legal pages are drafts** with bracketed placeholders (privacy, terms, cookies, shipping and returns). | Legal review | Professional review; see `docs/launch-checklist.md`. |
+| 8 | **Prices, shipping rates, countries and production times are placeholders.** | Business decision | Set prices in Admin → Products; edit `src/config/commerce.ts`. |
+| 9 | **NFC chips not yet written or tested on physical cards**; the metal card's on-metal inlay is unverified. | Operational | Test batch per `docs/nfc-programming.md`. |
+| 10 | **Refund webhooks aren't handled** (`charge.refunded`). Refunds are issued in Stripe and recorded by hand in admin. | Gap | Handle `charge.refunded` to record refunds automatically. |
+| 11 | **CSP allows inline scripts** (`'unsafe-inline'`), because Next's bootstrap scripts are inline and nonces would make every page dynamic. | Hardening | Try Next's experimental SRI support, or nonces on dynamic routes. |
+| 12 | **Product page description is streamed**, not in the initial `<head>`, so Lighthouse SEO scores 91 there (search bots get it because Next waits for them). | Minor SEO | Cache product metadata (`"use cache"` + `cacheTag`) so it prerenders. |
+| 13 | **Changing a profile address breaks old `/p/` links.** Cards are unaffected. | Gap | Keep old slugs and redirect them. |
+| 14 | **A guest basket isn't merged** into the account when someone signs in after adding items. The basket stays with the browser. | Minor UX | Merge carts on sign-in. |
+| 15 | **No admin screen to remove an admin or reset another admin's two-step verification.** | Gap | Add to the `admin:create` CLI or the admin area. Backup codes cover self-recovery. |
+| 16 | **Admin success messages vanish when a form leaves the page** (e.g. an approved proof leaving the queue). The new state is shown, but not a confirmation. | Minor UX | Toast or flash message. |
+| 17 | **Rate-limit client key trusts the first `X-Forwarded-For` hop.** Correct behind Vercel; may be spoofable on other hosts. | Deployment check | Confirm the host's proxy behaviour, or use its trusted client IP header. |
+| 18 | **The code is on GitHub but not in a folder on your computer.** | Optional | Connect a folder in the desktop app, or `git clone` the repo. |
+| 19 | **One profile per user**; profile photos are cropped automatically (no crop tool). | By design (for now) | Future work if wanted. |
+
+
+## Accounts and credentials needed before launch
+
+| Service | Used for | Variables |
+|---|---|---|
+| Domain registrar | The permanent card domain (multi-year, auto-renew) | `APP_URL`, `CARD_DOMAIN` |
+| Host (e.g. Vercel) | Running the app, cron for `npm run cleanup` | all |
+| Managed Postgres (e.g. Neon) | Database, with backups | `DATABASE_URL` |
+| Stripe | Checkout, Stripe Tax, refunds | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_TAX_ENABLED` |
+| Resend (or similar) | Account, order and admin emails | `EMAIL_PROVIDER`, `RESEND_API_KEY`, `EMAIL_FROM` |
+| S3-compatible storage (e.g. Cloudflare R2) | Profile photos and logos (private bucket) | `STORAGE_PROVIDER`, `S3_*` |
+| Upstash Redis | Shared rate limiting | `UPSTASH_REDIS_REST_*` |
+| Card printer / NFC supplier | Cards, chips, packaging with claim codes | — |
+
+Plus fresh `BETTER_AUTH_SECRET` and `CLAIM_CODE_SECRET`, the first admin via `npm run admin:create`, and the legal, tax and compliance items in [`docs/launch-checklist.md`](docs/launch-checklist.md).
+
+## Milestone 5: Polish and launch prep
+
+### Built
+
+- **Content pages**: About, Contact (form saved as an enquiry, rate-limited, with a hidden honeypot field), and Shipping and returns. The shipping table comes from the same config as checkout, and the page explains the 14-day cancellation right and the exemption for printed cards. **Privacy, Terms and Cookies drafts** describe what the app really does: processors, no cookies on public profiles, and analytics wording that adapts to the flag. Every legal page carries the banner "Draft — requires review by a qualified professional before launch."
+- **Home page**: use cases (conferences, stands, teams), and a testimonial section clearly labelled as a placeholder (no invented reviews).
+- **SEO**: page titles and descriptions; `robots.txt` (private areas blocked); a `sitemap.xml` built from the database (public pages, products, and only the profiles whose owners opted in); a default Open Graph image; profiles `noindex` unless opted in.
+- **Optional analytics** (`ANALYTICS_ENABLED`, off by default): daily totals of taps per card and views per profile, counted after the response is sent. No IPs, user agents, cookies or identifiers are stored, and obvious bots are skipped. Owners see "N taps in the last 30 days" per card and profile views on their overview.
+- **Housekeeping**: `npm run cleanup` expires stale checkout sessions, deletes abandoned anonymous baskets, and deletes logos and photos no longer referenced. Storage gained a `list()` for this.
+- **`docs/launch-checklist.md`**: business and trademark; UK/EU/US privacy (ICO, DPAs, DPIA, EU representative); cookies (PECR); VAT/OSS/US sales tax and Stripe Tax; consumer rights including personalised goods; product safety; accessibility; security and operations; fulfilment.
+
+### Tested
+
+- `npm run lint`, `npm run typecheck`, `npm run build`: pass.
+- Vitest: **119 tests** (73 unit, 46 integration). New: analytics counts only when enabled, skips bots, stores no identifiers; the cleanup job keeps what's in use and removes the rest.
+- Playwright: **61 tests**, all passing (20 functional, 36 accessibility, 5 content/SEO).
+  - **Accessibility (axe, WCAG 2.0/2.1/2.2 A + AA)**: 16 public pages plus a public profile and all 6 signed-in pages, at **desktop and phone size**, with **zero violations**. A keyboard test checks the skip link. (I also confirmed axe genuinely catches injected violations, so a pass isn't a false clean.)
+  - Content: draft banners, the placeholder label, the contact form, robots/sitemap rules, titles and the social image.
+- **Lighthouse (mobile emulation, local production build):**
+
+  | Page | Performance | Accessibility | Best practices | SEO |
+  |---|---|---|---|---|
+  | Public profile `/p/…` | **98** (LCP 1.0 s, CLS 0) | 100 | 100 | 66: deliberately `noindex` |
+  | Home | 99 | 100 | 100 | 100 |
+  | Product | 93 | 100 | 100 | 91: see open issue 12 |
+
+### Simulated or untested
+
+See **Open issues to fix** at the top.
 
 ## Milestone 4: Admin and fulfilment
 
@@ -123,7 +195,6 @@ _Last updated: Milestone 4 complete._
 
 - Shipping rates, countries and production times are placeholder policy in `src/config/commerce.ts`.
 - A guest basket isn't merged into the account when someone signs in after adding items. The basket stays with the browser either way.
-- Logo uploads are kept even if the person never checks out. They need a cleanup job (Milestone 5).
 
 ## Milestone 2: Cards and profiles
 
@@ -176,7 +247,6 @@ _Last updated: Milestone 4 complete._
 - **S3/R2 storage: untested.** It needs the `S3_*` variables and a private bucket.
 - **Upstash rate limiter: untested.** It needs `UPSTASH_REDIS_REST_*`. Without them the in-memory limiter is used, which isn't shared between server instances.
 - Email change is wired to Better Auth but not covered by an e2e test yet.
-- Optional tap/view analytics is not implemented (Milestone 5).
 
 ### Known gaps and follow-ups
 
@@ -217,7 +287,6 @@ _Last updated: Milestone 4 complete._
 
 ### Known gaps and follow-ups
 
-- Footer links to info pages that arrive in Milestone 5.
 - The CSP allows `'unsafe-inline'` scripts because Next's bootstrap scripts are inline and nonces would make every page dynamic. Revisit with Next's experimental SRI support before launch.
 
 ## Future work (out of scope for this build)
