@@ -8,7 +8,8 @@ import { env } from "@/config/env";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
 import { sendEmail } from "@/server/email";
-import { magicLinkMessage, resetPasswordMessage, verifyEmailMessage } from "@/server/email/templates";
+import { changeEmailMessage, magicLinkMessage, resetPasswordMessage, verifyEmailMessage } from "@/server/email/templates";
+import { prepareAccountDeletion } from "@/server/account";
 
 /** Relaxed limits are only honoured when APP_ENV=test (the e2e suite). */
 const relaxLimits = env.appEnv === "test" && process.env.E2E_RELAX_RATE_LIMITS === "true";
@@ -53,6 +54,17 @@ export const auth = betterAuth({
     autoSignInAfterVerification: true,
     expiresIn: 60 * 60,
     sendVerificationEmail: async ({ user, url }) => deliver(verifyEmailMessage(user.email, url)),
+  },
+  user: {
+    changeEmail: {
+      enabled: true,
+      // Approve from the old address first; Better Auth then verifies the new address.
+      sendChangeEmailConfirmation: async ({ user, newEmail, url }) => deliver(changeEmailMessage(user.email, newEmail, url)),
+    },
+    deleteUser: {
+      enabled: true,
+      beforeDelete: async (user) => prepareAccountDeletion(user.id),
+    },
   },
   session: {
     expiresIn: 60 * 60 * 24 * 30, // 30 days

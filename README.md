@@ -55,6 +55,8 @@ See [`.env.example`](.env.example) for the full list with comments. The importan
 | `BETTER_AUTH_SECRET` | Signs sessions and tokens. |
 | `CLAIM_CODE_SECRET` | HMAC key for card claim codes. Changing it invalidates all unclaimed codes. |
 | `EMAIL_PROVIDER` | `console` (development) or `resend` (needs `RESEND_API_KEY` and a verified domain). |
+| `STORAGE_PROVIDER` | `local` (writes to `./.uploads`) or `s3` (any S3-compatible bucket such as R2; keep it private, since files are served through the app). |
+| `UPSTASH_REDIS_REST_URL` / `_TOKEN` | Shared rate limiting in production. Without them the limiter is in-memory, per server. |
 | `APP_ENV` | `development`, `test` or `production`. Defaults from `NODE_ENV`. Only the e2e suite uses `test`. |
 
 ## Scripts
@@ -65,12 +67,16 @@ See [`.env.example`](.env.example) for the full list with comments. The importan
 | `npm run build` / `npm start` | Production build and server |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | Generates route types, then `tsc --noEmit` |
-| `npm test` | Unit tests (Vitest) |
+| `npm test` | Unit + integration tests (Vitest). Integration tests reset the `nfc_itest` database. |
 | `npm run test:e2e` | Builds, then runs Playwright against a fresh `nfc_test` database |
 | `npm run check` | Lint + type check + unit tests |
 | `npm run db:generate` | Creates a migration from changes to `src/db/schema.ts` |
 | `npm run db:migrate` | Applies migrations |
 | `npm run db:seed` | Seeds demo data |
+
+### Integration tests
+
+Integration tests run the data-access layer against a real database named in `ITEST_DATABASE_URL` (default `postgresql://postgres:postgres@localhost:5432/nfc_itest`; Docker Compose creates it). The suite resets it on each run.
 
 ### End-to-end tests
 
@@ -91,9 +97,11 @@ src/
   db/                Drizzle schema, migrations runner, seed
   lib/               auth server/client, helpers
   server/            server-only data access and integrations (email, cards…)
-  proxy.ts           optimistic sign-in redirect for /dashboard and /admin
+  actions/           server actions (each re-checks the session)
+  proxy.ts           rate limits /c/ and /p/, real 404s for missing profiles, sign-in redirect for /dashboard and /admin
 drizzle/             SQL migrations
-tests/unit/          Vitest
+tests/unit/          Vitest unit tests
+tests/integration/   Vitest against Postgres (ownership, claiming, card states)
 tests/e2e/           Playwright
 ```
 

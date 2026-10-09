@@ -1,6 +1,9 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { expect } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { Pool } from "pg";
+import { generateCardToken, generateClaimCode, hashClaimCode } from "../../src/server/cards/tokens";
 
 const OUTBOX = ".e2e-outbox";
 
@@ -28,4 +31,43 @@ export function firstLink(mail: Mail): string {
 
 export function uniqueEmail(prefix = "user") {
   return `${prefix}+${Date.now()}${Math.floor(Math.random() * 1000)}@example.com`;
+}
+
+
+export const PASSWORD = "correct horse battery";
+const TEST_DB = process.env.TEST_DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/nfc_test";
+const CLAIM_SECRET = "e2e-only-claim-secret-0123456789abcdef0123"; // matches playwright.config.ts
+
+/** Inserts a fresh unclaimed card, as a printer batch would. */
+export async function createUnclaimedCard() {
+  const token = generateCardToken();
+  const code = generateClaimCode();
+  const pool = new Pool({ connectionString: TEST_DB });
+  const { rows } = await pool.query<{ id: string }>(
+    "INSERT INTO card (id, token, claim_code_hash) VALUES ($1, $2, $3) RETURNING id",
+    [crypto.randomUUID(), token, hashClaimCode(code, CLAIM_SECRET)],
+  );
+  await pool.end();
+  return { id: rows[0].id, token, code };
+}
+
+export async function query<T extends Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T[]> {
+  const pool = new Pool({ connectionString: TEST_DB });
+  const { rows } = await pool.query<T>(sql, params);
+  await pool.end();
+  return rows;
+}
+
+/** Creates and verifies an account, leaving the page signed in on the dashboard. */
+export async function signUpAndVerify(page: Page, name: string, prefix = "user") {
+  const email = uniqueEmail(prefix);
+  await page.goto("/sign-up");
+  await page.getByLabel("Full name").fill(name);
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(PASSWORD);
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
+  await page.goto(firstLink(await waitForEmail(email, "verify-email")));
+  await expect(page.getByText("Email confirmed")).toBeVisible();
+  return email;
 }

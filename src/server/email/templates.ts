@@ -64,3 +64,16 @@ export function magicLinkMessage(to: string, url: string) {
     text: textVersion(heading, body, url, footnote),
   };
 }
+
+export function changeEmailMessage(to: string, newEmail: string, url: string) {
+  const heading = "Confirm your new email address";
+  const body = `Someone asked to change the email on your ${brand.name} account to ${newEmail}. If that was you, approve the change. We'll then send a confirmation link to the new address.`;
+  const footnote = "If you didn't ask for this, ignore this email and change your password.";
+  return {
+    to,
+    tag: "change-email",
+    subject: `Approve your email change on ${brand.name}`,
+    html: layout(heading, body, { label: "Approve the change", url }, footnote),
+    text: textVersion(heading, body, url, footnote),
+  };
+}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NavLink } from "@/components/dashboard/nav-link";
 import { Logo } from "@/components/site/logo";
 import { Container } from "@/components/ui/container";
 
@@ -25,9 +26,9 @@ export default function DashboardLayout({ children }: LayoutProps<"/">) {
         <Container>
           <nav aria-label="Account" className="-mb-px flex gap-6 overflow-x-auto text-sm font-medium">
             {nav.map((item) => (
-              <Link key={item.href} href={item.href} className="border-b-2 border-transparent py-3 whitespace-nowrap text-ink/75 hover:border-ink/30 hover:text-ink">
+              <NavLink key={item.href} href={item.href}>
                 {item.label}
-              </Link>
+              </NavLink>
             ))}
           </nav>
         </Container>

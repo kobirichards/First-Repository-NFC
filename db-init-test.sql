@@ -1,1 +1,2 @@
 CREATE DATABASE nfc_test;
+CREATE DATABASE nfc_itest;
