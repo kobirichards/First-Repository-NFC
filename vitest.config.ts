@@ -28,6 +28,7 @@ export default defineConfig({
             CLAIM_CODE_SECRET: "itest-claim-secret",
             BETTER_AUTH_SECRET: "itest-auth-secret-0123456789abcdef0123456789",
             APP_ENV: "test",
+            MAIL_OUTBOX_DIR: ".itest-outbox",
           },
         },
       },

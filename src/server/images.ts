@@ -33,3 +33,27 @@ export async function processProfilePhoto(input: Buffer): Promise<Buffer> {
     .webp({ quality: 82 })
     .toBuffer();
 }
+
+/**
+ * Validates and re-encodes a logo/artwork upload for custom printing:
+ * PNG output (keeps transparency), at most 2000px on the long edge, metadata removed.
+ */
+export async function processArtwork(input: Buffer): Promise<Buffer> {
+  if (input.byteLength === 0) throw new ImageRejectedError("Choose an image file.");
+  if (input.byteLength > MAX_UPLOAD_BYTES) throw new ImageRejectedError("Logo files can be up to 5 MB.");
+  let metadata: Metadata;
+  try {
+    metadata = await sharp(input, { limitInputPixels: 40_000_000 }).metadata();
+  } catch {
+    throw new ImageRejectedError("That file isn't an image we can read. Use a PNG, JPEG or WebP.");
+  }
+  if (!metadata.format || !ACCEPTED_FORMATS.has(metadata.format)) throw new ImageRejectedError("Use a PNG, JPEG or WebP logo.");
+  if ((metadata.width ?? 0) < 200 || (metadata.height ?? 0) < 100) {
+    throw new ImageRejectedError("That logo is too small to print well. Use one at least 200 pixels wide.");
+  }
+  return sharp(input, { limitInputPixels: 40_000_000 })
+    .rotate()
+    .resize(2000, 2000, { fit: "inside", withoutEnlargement: true })
+    .png()
+    .toBuffer();
+}

@@ -416,6 +416,41 @@ export const artworkProof = pgTable(
   (t) => [index().on(t.orderItemId)],
 );
 
+export type CheckoutSnapshotLine = {
+  productId: string;
+  optionId: string | null;
+  productName: string;
+  optionName: string | null;
+  quantity: number;
+  unitAmount: number;
+  customisation: Customisation | null;
+};
+
+/**
+ * What the customer agreed to buy when they started checkout. The order is
+ * created from this snapshot (plus the amounts Stripe reports) when the
+ * verified webhook arrives, never from the browser redirect.
+ */
+export const checkoutSession = pgTable(
+  "checkout_session",
+  {
+    /** The payment provider's session id (Stripe `cs_…`, or `sim_…` in development). */
+    id: text().primaryKey(),
+    provider: text().notNull(),
+    cartId: text().references(() => cart.id, { onDelete: "set null" }),
+    userId: text().references(() => user.id, { onDelete: "set null" }),
+    currency: currency().notNull(),
+    lines: jsonb().$type<CheckoutSnapshotLine[]>().notNull(),
+    subtotal: integer().notNull(),
+    /** "open" | "awaiting_payment" | "completed" | "expired" */
+    status: text().notNull().default("open"),
+    orderId: text().references(() => order.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index().on(t.userId)],
+);
+
 /** Processed Stripe webhook event IDs, for idempotency. */
 export const stripeEvent = pgTable("stripe_event", {
   id: text().primaryKey(),
@@ -550,6 +585,10 @@ export const orderItemRelations = relations(orderItem, ({ one, many }) => ({
 
 export const refundRelations = relations(refund, ({ one }) => ({
   order: one(order, { fields: [refund.orderId], references: [order.id] }),
+}));
+
+export const checkoutSessionRelations = relations(checkoutSession, ({ one }) => ({
+  order: one(order, { fields: [checkoutSession.orderId], references: [order.id] }),
 }));
 
 export const artworkProofRelations = relations(artworkProof, ({ one }) => ({

@@ -57,6 +57,8 @@ See [`.env.example`](.env.example) for the full list with comments. The importan
 | `EMAIL_PROVIDER` | `console` (development) or `resend` (needs `RESEND_API_KEY` and a verified domain). |
 | `STORAGE_PROVIDER` | `local` (writes to `./.uploads`) or `s3` (any S3-compatible bucket such as R2; keep it private, since files are served through the app). |
 | `UPSTASH_REDIS_REST_URL` / `_TOKEN` | Shared rate limiting in production. Without them the limiter is in-memory, per server. |
+| `PAYMENTS_PROVIDER` | `stripe` or `simulated` (see Stripe test mode). |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | Stripe API key and webhook signing secret. |
 | `APP_ENV` | `development`, `test` or `production`. Defaults from `NODE_ENV`. Only the e2e suite uses `test`. |
 
 ## Scripts
@@ -115,4 +117,25 @@ Target: Vercel (or any Node host) plus managed Postgres (e.g. Neon). Not deploye
 4. Never set `APP_ENV=test`, and never run `db:seed`, in production.
 5. Register `CARD_DOMAIN` for the long term, with auto-renew. See `docs/launch-checklist.md` (Milestone 5).
 
-Stripe setup instructions arrive with Milestone 3.
+6. Set `PAYMENTS_PROVIDER=stripe`, live keys, and a webhook endpoint at `https://YOUR_DOMAIN/api/webhooks/stripe` (see below).
+
+## Stripe test mode
+
+Without Stripe keys, checkout uses a **simulated provider**: a local page at `/dev/checkout/…` that says plainly that no payment is taken, and that creates the order through the same code a verified Stripe webhook uses. It can't run when `APP_ENV=production`.
+
+To use real Stripe Checkout in test mode:
+
+1. Create a Stripe account and stay in **test mode**. Copy the secret key (`sk_test_…`) into `STRIPE_SECRET_KEY`.
+2. Install the [Stripe CLI](https://docs.stripe.com/stripe-cli) and forward webhooks to your machine:
+   ```bash
+   stripe login
+   stripe listen --forward-to localhost:3000/api/webhooks/stripe \
+     --events checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,checkout.session.expired
+   ```
+   Copy the `whsec_…` it prints into `STRIPE_WEBHOOK_SECRET`, then restart `npm run dev`.
+3. Buy something and pay with the test card `4242 4242 4242 4242`, any future expiry date and any CVC.
+4. The order appears once the webhook arrives. The success page waits for it.
+
+Orders are created **only** from verified webhooks, never from the browser returning to the success page. Each event is processed once, even if Stripe retries it.
+
+**Tax:** prices are fixed per currency. UK/EU prices are VAT-inclusive; US prices exclude sales tax. Set `STRIPE_TAX_ENABLED=true` only after adding your tax registrations in Stripe; until then no tax is calculated. Shipping rates, countries and production times are in `src/config/commerce.ts`.

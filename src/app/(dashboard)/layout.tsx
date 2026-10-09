@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { NavLink } from "@/components/dashboard/nav-link";
 import { Logo } from "@/components/site/logo";
 import { Container } from "@/components/ui/container";
@@ -25,11 +26,20 @@ export default function DashboardLayout({ children }: LayoutProps<"/">) {
         </Container>
         <Container>
           <nav aria-label="Account" className="-mb-px flex gap-6 overflow-x-auto text-sm font-medium">
-            {nav.map((item) => (
-              <NavLink key={item.href} href={item.href}>
-                {item.label}
-              </NavLink>
-            ))}
+            {/* The current-page highlight reads the URL, so it streams in; the fallback is the same links without it. */}
+            <Suspense
+              fallback={nav.map((item) => (
+                <Link key={item.href} href={item.href} className="border-b-2 border-transparent py-3 whitespace-nowrap text-ink/75">
+                  {item.label}
+                </Link>
+              ))}
+            >
+              {nav.map((item) => (
+                <NavLink key={item.href} href={item.href}>
+                  {item.label}
+                </NavLink>
+              ))}
+            </Suspense>
           </nav>
         </Container>
       </header>

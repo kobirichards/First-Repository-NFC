@@ -77,3 +77,72 @@ export function changeEmailMessage(to: string, newEmail: string, url: string) {
     text: textVersion(heading, body, url, footnote),
   };
 }
+
+export function orderConfirmationMessage(
+  to: string,
+  order: {
+    reference: string;
+    lines: Array<{ name: string; quantity: number; amount: string }>;
+    subtotal: string;
+    shipping: string;
+    tax: string | null;
+    total: string;
+    needsProof: boolean;
+    ordersUrl: string | null;
+  },
+) {
+  const heading = `Thanks for your order ${order.reference}`;
+  const itemsText = order.lines.map((l) => `${l.quantity} × ${l.name}: ${l.amount}`).join("\n");
+  const totalsText = [`Subtotal: ${order.subtotal}`, `Delivery: ${order.shipping}`, order.tax ? `Tax: ${order.tax}` : null, `Total paid: ${order.total}`]
+    .filter(Boolean)
+    .join("\n");
+  const next = order.needsProof
+    ? "Next, we'll email you a proof of your printed design to approve before we make your cards."
+    : "We'll email you when your cards are on their way.";
+  const body = `Payment received.\n\n${itemsText}\n\n${totalsText}\n\n${next}`;
+  const rows = order.lines
+    .map(
+      (l) =>
+        `<tr><td style="padding:6px 0">${escapeHtml(`${l.quantity} × ${l.name}`)}</td><td align="right" style="padding:6px 0">${escapeHtml(l.amount)}</td></tr>`,
+    )
+    .join("");
+  const totals = [
+    ["Subtotal", order.subtotal],
+    ["Delivery", order.shipping],
+    ...(order.tax ? [["Tax", order.tax]] : []),
+    ["Total paid", order.total],
+  ]
+    .map(([k, v]) => `<tr><td style="padding:4px 0;color:#5B6B64">${escapeHtml(k)}</td><td align="right" style="padding:4px 0">${escapeHtml(v)}</td></tr>`)
+    .join("");
+  const url = order.ordersUrl ?? "";
+  const html = `<!doctype html><html><body style="margin:0;background:#F5F6F3;font-family:Arial,Helvetica,sans-serif;color:#14231E">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:32px 24px">
+<table role="presentation" width="100%" style="max-width:520px" cellpadding="0" cellspacing="0">
+<tr><td style="font-size:18px;font-weight:bold;padding-bottom:24px">${escapeHtml(brand.name)}</td></tr>
+<tr><td style="font-size:22px;font-weight:bold;padding-bottom:12px">${escapeHtml(heading)}</td></tr>
+<tr><td style="font-size:16px;padding-bottom:16px">Payment received.</td></tr>
+<tr><td><table role="presentation" width="100%" style="font-size:15px;border-top:1px solid #DCE1DC;border-bottom:1px solid #DCE1DC">${rows}</table></td></tr>
+<tr><td><table role="presentation" width="100%" style="font-size:15px;margin-top:8px">${totals}</table></td></tr>
+<tr><td style="font-size:16px;line-height:1.5;padding-top:16px">${escapeHtml(next)}</td></tr>
+${url ? `<tr><td style="padding-top:24px"><a href="${escapeHtml(url)}" style="display:inline-block;background:#1F4D3F;color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 20px;border-radius:6px">View your order</a></td></tr>` : ""}
+</table></td></tr></table></body></html>`;
+  return {
+    to,
+    tag: "order-confirmation",
+    subject: `Order ${order.reference} confirmed`,
+    html,
+    text: `${heading}\n\n${body}${url ? `\n\nView your order: ${url}` : ""}\n\n— ${brand.name}`,
+  };
+}
+
+export function enquiryNotificationMessage(to: string, enquiry: { company?: string | null; name: string; email: string; quantity?: number | null; message: string }) {
+  const heading = "New team enquiry";
+  const body = `${enquiry.name} <${enquiry.email}>${enquiry.company ? ` from ${enquiry.company}` : ""}${enquiry.quantity ? `, about ${enquiry.quantity} cards` : ""}.\n\n${enquiry.message}`;
+  return {
+    to,
+    tag: "enquiry-notification",
+    subject: `Team enquiry${enquiry.company ? `: ${enquiry.company}` : ""}`,
+    html: `<!doctype html><html><body style="font-family:Arial,Helvetica,sans-serif;color:#14231E"><h1 style="font-size:20px">${escapeHtml(heading)}</h1><p style="white-space:pre-line">${escapeHtml(body)}</p></body></html>`,
+    text: `${heading}\n\n${body}`,
+  };
+}

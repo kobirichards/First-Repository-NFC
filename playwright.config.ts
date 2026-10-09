@@ -13,6 +13,8 @@ export default defineConfig({
   globalSetup: "./tests/e2e/global-setup.ts",
   use: {
     baseURL: `http://localhost:${PORT}`,
+    // A UK visitor, so the default currency is GBP (see currencyFromAcceptLanguage).
+    locale: "en-GB",
     trace: "retain-on-failure",
     launchOptions: process.env.PLAYWRIGHT_CHROMIUM_PATH
       ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH }

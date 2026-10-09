@@ -87,6 +87,10 @@ export const RULES = {
   publicPerClient: { window: 60, max: relaxed ? 10_000 : 120 },
   /** Contact/enquiry form submissions per client. */
   formPerClient: { window: 60 * 10, max: relaxed ? 500 : 5 },
+  /** Checkout sessions started per client. */
+  checkoutPerClient: { window: 60 * 10, max: relaxed ? 1000 : 10 },
+  /** Basket changes and logo uploads per client. */
+  cartPerClient: { window: 60, max: relaxed ? 5000 : 60 },
   /** Profile/photo saves per user. */
   writePerUser: { window: 60, max: relaxed ? 1000 : 30 },
 } satisfies Record<string, LimitRule>;
