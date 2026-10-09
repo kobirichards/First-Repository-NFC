@@ -146,7 +146,7 @@ describe("card administration", () => {
     await expect(claimCard(third, row.token, row.claim_code, SECRET)).rejects.toThrow(); // old code no longer works
     await expect(claimCard(third, row.token, claimCode, SECRET)).resolves.toBeTruthy();
 
-    const events = await listAuditEvents(admin, { entityType: "card", entityId: cardId });
+    const { rows: events } = await listAuditEvents(admin, { entityType: "card", entityId: cardId });
     expect(events.map((e) => e.action).sort()).toEqual(["card.disable", "card.reassign", "card.release"]);
     const disable = events.find((e) => e.action === "card.disable")!;
     expect(disable.before).toMatchObject({ status: "ACTIVE" });

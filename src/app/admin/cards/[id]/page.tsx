@@ -6,6 +6,7 @@ import { PageHeader, Pill, Section, adminDate, statusTone } from "@/components/a
 import { NotFoundError } from "@/server/errors";
 import { cardUrl } from "@/server/links";
 import { getCardForAdmin, listAuditEvents, requireAdmin } from "@/server/admin";
+import { Loading } from "@/components/ui/loading";
 
 async function CardAdmin({ params }: { params: PageProps<"/admin/cards/[id]">["params"] }) {
   const actor = await requireAdmin();
@@ -17,7 +18,7 @@ async function CardAdmin({ params }: { params: PageProps<"/admin/cards/[id]">["p
     if (error instanceof NotFoundError) notFound();
     throw error;
   }
-  const history = await listAuditEvents(actor, { entityType: "card", entityId: c.id, limit: 50 });
+  const { rows: history } = await listAuditEvents(actor, { entityType: "card", entityId: c.id, size: 50 });
   return (
     <>
       <PageHeader title="Card" description={<span className="font-mono">{cardUrl(c.token)}</span>} actions={<Pill tone={statusTone[c.status]}>{c.status.toLowerCase()}</Pill>} />
@@ -73,7 +74,7 @@ async function CardAdmin({ params }: { params: PageProps<"/admin/cards/[id]">["p
 
 export default function AdminCardPage(props: PageProps<"/admin/cards/[id]">) {
   return (
-    <Suspense fallback={<p className="text-moss">Loading…</p>}>
+    <Suspense fallback={<Loading />}>
       <CardAdmin params={props.params} />
     </Suspense>
   );

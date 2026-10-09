@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { EmailMessage, EmailSender } from "./types";
 
@@ -14,7 +14,9 @@ export class ConsoleEmailSender implements EmailSender {
     await mkdir(this.dir, { recursive: true });
     const safeTo = message.to.replace(/[^a-z0-9@._-]/gi, "_");
     const file = path.join(this.dir, `${Date.now()}-${message.tag}-${safeTo}.json`);
-    await writeFile(file, JSON.stringify({ ...message, sentAt: new Date().toISOString() }, null, 2));
+    // Write then rename, so anything watching the folder never reads a half-written file.
+    await writeFile(`${file}.tmp`, JSON.stringify({ ...message, sentAt: new Date().toISOString() }, null, 2));
+    await rename(`${file}.tmp`, file);
     console.info(`[email:dev] "${message.subject}" → ${message.to} (saved to ${path.relative(process.cwd(), file)})`);
   }
 }

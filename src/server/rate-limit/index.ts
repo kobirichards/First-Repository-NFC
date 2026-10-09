@@ -1,4 +1,5 @@
 import "server-only";
+import { logError } from "@/server/log";
 
 export type LimitRule = { /** seconds */ window: number; max: number };
 export type LimitResult = { ok: boolean; remaining: number; retryAfter: number };
@@ -52,6 +53,7 @@ export class UpstashRateLimiter implements RateLimiter {
           ["TTL", redisKey],
         ]),
         cache: "no-store",
+        signal: AbortSignal.timeout(1_500),
       });
       if (!res.ok) throw new Error(`status ${res.status}`);
       const [incr, , ttl] = (await res.json()) as Array<{ result: number }>;
@@ -59,7 +61,7 @@ export class UpstashRateLimiter implements RateLimiter {
       const ok = count <= rule.max;
       return { ok, remaining: Math.max(0, rule.max - count), retryAfter: ok ? 0 : Math.max(1, ttl.result) };
     } catch (error) {
-      console.error("[rate-limit] Upstash unavailable, allowing request:", error instanceof Error ? error.message : error);
+      logError("rate_limit.upstash_unavailable", error);
       return { ok: true, remaining: rule.max, retryAfter: 0 };
     }
   }
@@ -99,11 +101,4 @@ export async function checkLimit(scope: keyof typeof RULES, id: string): Promise
   return getRateLimiter().hit(`${scope}:${id}`, RULES[scope]);
 }
 
-/**
- * Best-effort client identifier for rate limiting only. Never stored.
- * Trusts x-forwarded-for's first hop, which is correct behind Vercel/most proxies.
- */
-export function clientKey(headers: Headers): string {
-  const forwarded = headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return forwarded || headers.get("x-real-ip") || "unknown";
-}
+export { clientKey } from "@/server/client-ip";

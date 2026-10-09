@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import type { ActionState } from "@/actions/result";
 import { removeItemAction, updateQuantityAction } from "@/actions/shop";
 import { Button } from "@/components/ui/button";
 import { MAX_QUANTITY_PER_LINE } from "@/config/commerce";
+import { callAction } from "@/lib/call-action";
 
 export function CartLineControls({
   line,
@@ -24,6 +25,7 @@ export function CartLineControls({
 }) {
   const [state, update, updating] = useActionState<ActionState, FormData>(updateQuantityAction.bind(null, line.id), {});
   const [removing, startRemove] = useTransition();
+  const [removeError, setRemoveError] = useState<string | null>(null);
   const name = line.optionName ? `${line.productName}, ${line.optionName}` : line.productName;
 
   return (
@@ -62,7 +64,18 @@ export function CartLineControls({
         <Button type="submit" variant="secondary" disabled={updating}>
           Update
         </Button>
-        <Button variant="quiet" className="mb-2.5 text-sm" disabled={removing} onClick={() => startRemove(async () => void (await removeItemAction(line.id)))}>
+        <Button
+          variant="quiet"
+          className="mb-2.5 text-sm"
+          disabled={removing}
+          onClick={() =>
+            startRemove(async () => {
+              setRemoveError(null);
+              const r = await callAction(() => removeItemAction(line.id));
+              if (r.ok === false) setRemoveError(r.message ?? "That item couldn't be removed. Try again.");
+            })
+          }
+        >
           Remove<span className="sr-only"> {name}</span>
         </Button>
       </form>
@@ -70,6 +83,11 @@ export function CartLineControls({
       {state.ok === false && state.message ? (
         <p role="alert" className="text-sm font-medium text-danger sm:col-span-3">
           {state.fieldErrors?.quantity ?? state.message}
+        </p>
+      ) : null}
+      {removeError ? (
+        <p role="alert" className="text-sm font-medium text-danger sm:col-span-3">
+          {removeError}
         </p>
       ) : null}
     </li>

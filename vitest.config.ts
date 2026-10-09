@@ -5,6 +5,7 @@ const alias = {
   "@": path.resolve(__dirname, "src"),
   // `server-only` throws outside a React Server environment; it's a no-op for tests.
   "server-only": path.resolve(__dirname, "tests/stubs/server-only.ts"),
+  "next/cache": path.resolve(__dirname, "tests/stubs/next-cache.ts"),
 };
 
 export default defineConfig({

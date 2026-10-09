@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { db as defaultDb } from "@/db";
 import { card, cardAssignment, profile } from "@/db/schema";
@@ -7,6 +7,7 @@ import { safeExternalUrl } from "@/lib/urls";
 import { NotFoundError, UserFacingError } from "../errors";
 import { ensureOwnProfile } from "../profiles";
 import { claimCodeMatches, isWellFormedCardToken } from "./tokens";
+import { type Paged, pageRequest, toPaged } from "../pagination";
 
 /*
  * Ownership: every customer function filters by `ownerId = userId`, so a
@@ -33,12 +34,28 @@ const ownCardColumns = {
   deactivatedAt: true,
 } as const;
 
-export async function listOwnCards(userId: string, db: Db = defaultDb): Promise<OwnCard[]> {
-  return db.query.card.findMany({
+export async function listOwnCards(userId: string, page = 1, db: Db = defaultDb): Promise<Paged<OwnCard>> {
+  const request = pageRequest(page, 20);
+  const rows = await db.query.card.findMany({
     where: eq(card.ownerId, userId),
     columns: ownCardColumns,
-    orderBy: [desc(card.claimedAt), desc(card.createdAt)],
+    orderBy: [desc(card.claimedAt), desc(card.createdAt), desc(card.id)],
+    limit: request.limit,
+    offset: request.offset,
   });
+  return toPaged(rows, request);
+}
+
+/** Totals for the account overview, without loading every card. */
+export async function countOwnCards(userId: string, db: Db = defaultDb) {
+  const [row] = await db
+    .select({
+      total: sql<number>`count(*)::int`,
+      active: sql<number>`count(*) filter (where ${card.status} = 'ACTIVE')::int`,
+    })
+    .from(card)
+    .where(eq(card.ownerId, userId));
+  return { total: row?.total ?? 0, active: row?.active ?? 0 };
 }
 
 export async function getOwnCard(userId: string, cardId: string, db: Db = defaultDb): Promise<OwnCard> {

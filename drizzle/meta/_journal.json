@@ -22,6 +22,13 @@
       "when": 1791544383405,
       "tag": "0002_proof_file_optional",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791564353774,
+      "tag": "0003_performance_indexes",
+      "breakpoints": true
     }
   ]
 }

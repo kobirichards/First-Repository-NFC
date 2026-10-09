@@ -14,7 +14,7 @@ export async function ShopControls() {
     <div className="flex items-center gap-3">
       <CurrencySwitcher key={currency} current={currency} />
       <Link href="/cart" className="text-sm font-semibold text-ink hover:text-bottle">
-        Basket{count ? <span className="ml-1 rounded-full bg-bottle px-2 py-0.5 text-xs text-white">{count}</span> : null}
+        Basket{count ? <span className="ml-1.5 rounded-[3px] bg-bottle px-1.5 py-0.5 text-xs text-white">{count}</span> : null}
         <span className="sr-only">{count ? ` (${count} ${count === 1 ? "item" : "items"})` : " (empty)"}</span>
       </Link>
     </div>

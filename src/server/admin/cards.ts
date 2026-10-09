@@ -8,6 +8,7 @@ import { ensureOwnProfile } from "../profiles";
 import { generateClaimCode, hashClaimCode } from "../cards/tokens";
 import { recordAudit } from "./audit";
 import { type AdminActor, assertAdmin } from "./guard";
+import { pageRequest, toPaged } from "../pagination";
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
@@ -19,11 +20,12 @@ const snapshot = (c: typeof card.$inferSelect) => ({
   orderItemId: c.orderItemId,
 });
 
-export async function searchCards(actor: AdminActor, query: string, db: Db = defaultDb) {
+export async function searchCards(actor: AdminActor, query: string, page = 1, db: Db = defaultDb) {
   assertAdmin(actor);
+  const request = pageRequest(page);
   const q = query.trim();
   const token = q.match(/\/c\/([A-Za-z0-9_-]+)/)?.[1] ?? q;
-  return db
+  const rows = await db
     .select({
       id: card.id,
       token: card.token,
@@ -36,8 +38,10 @@ export async function searchCards(actor: AdminActor, query: string, db: Db = def
     .from(card)
     .leftJoin(user, eq(card.ownerId, user.id))
     .where(q ? or(ilike(card.token, `${token.replace(/[%_\\]/g, "\\$&")}%`), ilike(user.email, `%${q.replace(/[%_\\]/g, "\\$&")}%`)) : undefined)
-    .orderBy(desc(card.createdAt))
-    .limit(100);
+    .orderBy(desc(card.createdAt), desc(card.id))
+    .limit(request.limit)
+    .offset(request.offset);
+  return toPaged(rows, request);
 }
 
 export async function getCardForAdmin(actor: AdminActor, cardId: string, db: Db = defaultDb) {

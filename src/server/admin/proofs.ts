@@ -10,17 +10,27 @@ import { NotFoundError, UserFacingError } from "../errors";
 import { getStorage } from "../storage";
 import { recordAudit } from "./audit";
 import { type AdminActor, assertAdmin } from "./guard";
+import { logError } from "@/server/log";
+import { pageRequest, toPaged } from "../pagination";
 
 export type ProofStatus = (typeof proofStatus.enumValues)[number];
 
-export async function listProofs(actor: AdminActor, status: ProofStatus | undefined = "PENDING", db: Db = defaultDb) {
+export async function listProofs(actor: AdminActor, status: ProofStatus | undefined = "PENDING", page = 1, db: Db = defaultDb) {
   assertAdmin(actor);
-  return db.query.artworkProof.findMany({
+  const request = pageRequest(page);
+  const rows = await db.query.artworkProof.findMany({
     where: status ? eq(artworkProof.status, status) : undefined,
-    orderBy: [desc(artworkProof.createdAt)],
-    limit: 200,
+    orderBy: [desc(artworkProof.createdAt), desc(artworkProof.id)],
+    limit: request.limit,
+    offset: request.offset,
     with: { orderItem: { with: { order: { columns: { id: true, reference: true, email: true } } } } },
   });
+  return toPaged(rows, request);
+}
+
+export async function countProofs(actor: AdminActor, status: ProofStatus, db: Db = defaultDb) {
+  assertAdmin(actor);
+  return db.$count(artworkProof, eq(artworkProof.status, status));
 }
 
 /**
@@ -69,7 +79,7 @@ export async function reviewProof(actor: AdminActor, proofId: string, decision: 
       decision === "REJECTED"
         ? orderStatusMessage(o.email, o.reference, "We need a change to your design", `Before we can print your cards: ${cleanNotes} Reply to this email with an updated file or details.`, url)
         : orderStatusMessage(o.email, o.reference, "Your design is approved", "Your design is approved and your cards are now being made.", url);
-    await sendEmail(message).catch((e: unknown) => console.error("[admin] proof email failed:", e instanceof Error ? e.message : e));
+    await sendEmail(message).catch((e: unknown) => logError("admin.proof_email", e, { proofId }));
   }
   return { movedToProduction: result.movedToProduction };
 }

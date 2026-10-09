@@ -5,6 +5,7 @@ import { reassignCardAction, releaseCardAction, setCardActiveAction } from "@/ac
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/notice";
 import { ActionForm, inputClass } from "./forms";
+import { callAction } from "@/lib/call-action";
 
 export function CardAdminActions({ cardId, status, hasOwner }: { cardId: string; status: string; hasOwner: boolean }) {
   const [pending, start] = useTransition();
@@ -15,12 +16,30 @@ export function CardAdminActions({ cardId, status, hasOwner }: { cardId: string;
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap gap-3">
         {status === "ACTIVE" ? (
-          <Button variant="danger" disabled={pending} onClick={() => start(async () => setMessage({ ...(await setCardActiveAction(cardId, false)), text: "Card disabled." }))}>
+          <Button
+            variant="danger"
+            disabled={pending}
+            onClick={() =>
+              start(async () => {
+                const r = await callAction(() => setCardActiveAction(cardId, false));
+                setMessage({ ok: r.ok, text: r.ok === false ? r.message : "Card disabled." });
+              })
+            }
+          >
             Disable card
           </Button>
         ) : null}
         {status === "DEACTIVATED" && hasOwner ? (
-          <Button variant="secondary" disabled={pending} onClick={() => start(async () => setMessage({ ...(await setCardActiveAction(cardId, true)), text: "Card reactivated." }))}>
+          <Button
+            variant="secondary"
+            disabled={pending}
+            onClick={() =>
+              start(async () => {
+                const r = await callAction(() => setCardActiveAction(cardId, true));
+                setMessage({ ok: r.ok, text: r.ok === false ? r.message : "Card reactivated." });
+              })
+            }
+          >
             Reactivate card
           </Button>
         ) : null}
@@ -33,8 +52,8 @@ export function CardAdminActions({ cardId, status, hasOwner }: { cardId: string;
                 disabled={pending}
                 onClick={() =>
                   start(async () => {
-                    const r = await releaseCardAction(cardId);
-                    setMessage({ ok: r.ok, text: r.message, code: r.claimCode });
+                    const r = await callAction(() => releaseCardAction(cardId));
+                    setMessage({ ok: r.ok, text: r.message, code: "claimCode" in r ? r.claimCode : undefined });
                     setConfirmRelease(false);
                   })
                 }

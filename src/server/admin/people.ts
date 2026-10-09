@@ -6,16 +6,20 @@ import { enquiry, enquiryStatus, user } from "@/db/schema";
 import { NotFoundError, UserFacingError } from "../errors";
 import { recordAudit } from "./audit";
 import { type AdminActor, assertAdmin } from "./guard";
+import { pageRequest, toPaged } from "../pagination";
 
-export async function listCustomers(actor: AdminActor, query = "", db: Db = defaultDb) {
+export async function listCustomers(actor: AdminActor, query = "", page = 1, db: Db = defaultDb) {
   assertAdmin(actor);
   const q = query.trim().replace(/[%_\\]/g, "\\$&");
-  return db.query.user.findMany({
+  const request = pageRequest(page);
+  const rows = await db.query.user.findMany({
     where: q ? or(ilike(user.email, `%${q}%`), ilike(user.name, `%${q}%`)) : undefined,
-    orderBy: [desc(user.createdAt)],
-    limit: 100,
+    orderBy: [desc(user.createdAt), desc(user.id)],
+    limit: request.limit,
+    offset: request.offset,
     columns: { id: true, name: true, email: true, emailVerified: true, role: true, createdAt: true },
   });
+  return toPaged(rows, request);
 }
 
 export async function getCustomer(actor: AdminActor, userId: string, db: Db = defaultDb) {
@@ -35,13 +39,21 @@ export async function getCustomer(actor: AdminActor, userId: string, db: Db = de
 
 export type EnquiryStatus = (typeof enquiryStatus.enumValues)[number];
 
-export async function listEnquiries(actor: AdminActor, status?: EnquiryStatus, db: Db = defaultDb) {
+export async function listEnquiries(actor: AdminActor, status?: EnquiryStatus, page = 1, db: Db = defaultDb) {
   assertAdmin(actor);
-  return db.query.enquiry.findMany({
+  const request = pageRequest(page);
+  const rows = await db.query.enquiry.findMany({
     where: status ? eq(enquiry.status, status) : undefined,
-    orderBy: [desc(enquiry.createdAt)],
-    limit: 200,
+    orderBy: [desc(enquiry.createdAt), desc(enquiry.id)],
+    limit: request.limit,
+    offset: request.offset,
   });
+  return toPaged(rows, request);
+}
+
+export async function countEnquiries(actor: AdminActor, status: EnquiryStatus, db: Db = defaultDb) {
+  assertAdmin(actor);
+  return db.$count(enquiry, eq(enquiry.status, status));
 }
 
 export async function setEnquiryStatus(actor: AdminActor, enquiryId: string, status: EnquiryStatus, db: Db = defaultDb) {

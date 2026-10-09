@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { DataPanel, DeleteAccountForm, EmailForm, NameForm, PasswordForm } from "@/components/dashboard/account-forms";
 import { SignOutButton } from "@/components/dashboard/sign-out-button";
 import { requireUser } from "@/server/session";
+import { Loading } from "@/components/ui/loading";
 
 export const metadata: Metadata = { title: "Account settings", robots: { index: false } };
 
@@ -25,7 +26,7 @@ async function Account() {
 
 export default function AccountPage() {
   return (
-    <Suspense fallback={<p className="text-moss">Loading…</p>}>
+    <Suspense fallback={<Loading />}>
       <Account />
     </Suspense>
   );

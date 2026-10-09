@@ -3,6 +3,7 @@ import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { db as defaultDb } from "@/db";
 import { dailyStat } from "@/db/schema";
+import { logError } from "@/server/log";
 
 /**
  * Optional, privacy-preserving usage counts (ANALYTICS_ENABLED=true).
@@ -32,12 +33,12 @@ async function increment(kind: "tap" | "view", ids: { cardId?: string | null; pr
 
 export async function recordTap(cardId: string, userAgent: string | null, db: Db = defaultDb) {
   if (!analyticsEnabled() || (userAgent && BOT.test(userAgent))) return;
-  await increment("tap", { cardId }, db).catch((e: unknown) => console.error("[analytics] tap:", e instanceof Error ? e.message : e));
+  await increment("tap", { cardId }, db).catch((e: unknown) => logError("analytics.tap", e));
 }
 
 export async function recordView(profileId: string, userAgent: string | null, db: Db = defaultDb) {
   if (!analyticsEnabled() || (userAgent && BOT.test(userAgent))) return;
-  await increment("view", { profileId }, db).catch((e: unknown) => console.error("[analytics] view:", e instanceof Error ? e.message : e));
+  await increment("view", { profileId }, db).catch((e: unknown) => logError("analytics.view", e));
 }
 
 function since(days: number) {

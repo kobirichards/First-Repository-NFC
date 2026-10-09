@@ -63,6 +63,9 @@ See [`.env.example`](.env.example) for the full list with comments. The importan
 | `PAYMENTS_PROVIDER` | `stripe` or `simulated` (see Stripe test mode). |
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | Stripe API key and webhook signing secret. |
 | `APP_ENV` | `development`, `test` or `production`. Defaults from `NODE_ENV`. Only the e2e suite uses `test`. |
+| `TRUSTED_IP_HEADER` | Only off Vercel: the header your proxy sets with the real client IP, used for rate limits. |
+
+With `APP_ENV=production` (or on a Vercel production deployment) the server **refuses to start** if a setting is unsafe: placeholder or short secrets, an `http://` or local address, console email, simulated payments, local file storage, or a secret named `NEXT_PUBLIC_*`. The logs list each problem by variable name, never by value.
 
 ## Scripts
 
@@ -123,6 +126,21 @@ Target: Vercel (or any Node host) plus managed Postgres (e.g. Neon). Not deploye
 5. Register `CARD_DOMAIN` for the long term, with auto-renew. See `docs/launch-checklist.md` (Milestone 5).
 
 6. Set `PAYMENTS_PROVIDER=stripe`, live keys, and a webhook endpoint at `https://YOUR_DOMAIN/api/webhooks/stripe` (see below).
+
+## Logs and errors
+
+Every unhandled server error, and every caught failure (an email that didn't send, a webhook that failed), is written as one JSON line with `level`, `scope` and a message, never with customer details. On Vercel they appear under the project's **Logs** tab; add a log drain to forward them to an error tracker. When a page fails, the visitor sees a short message with a reference; search the logs for that reference (`digest`) to find the error.
+
+## Spending caps
+
+Nothing in the code can run up a bill on its own (rate limits cap sign-ups, uploads, checkouts and form posts), but set a ceiling with each provider too:
+
+- **Vercel:** Settings → Billing → Spend Management. Set a monthly amount and choose to pause projects when it's reached.
+- **Neon:** set the compute size limit (autoscaling max) and storage alerts on the project.
+- **Cloudflare R2:** Billing → notifications for R2 usage. The free tier covers a small shop.
+- **Upstash:** set a monthly budget on the database.
+- **Resend:** the plan's monthly email allowance is a hard cap; stay on a fixed plan.
+- **Stripe:** there's no spend, but turn on Radar rules (block high-risk payments) to limit fraud and dispute fees.
 
 ## Admin area
 

@@ -23,7 +23,7 @@ function layout(heading: string, body: string, action: { label: string; url: str
 }
 
 function textVersion(heading: string, body: string, url: string, footnote: string) {
-  return `${heading}\n\n${body}\n\n${url}\n\n${footnote}\n\n— ${brand.name}`;
+  return `${heading}\n\n${body}\n\n${url}\n\n${footnote}\n\n${brand.name}`;
 }
 
 export function verifyEmailMessage(to: string, url: string) {
@@ -131,7 +131,7 @@ ${url ? `<tr><td style="padding-top:24px"><a href="${escapeHtml(url)}" style="di
     tag: "order-confirmation",
     subject: `Order ${order.reference} confirmed`,
     html,
-    text: `${heading}\n\n${body}${url ? `\n\nView your order: ${url}` : ""}\n\n— ${brand.name}`,
+    text: `${heading}\n\n${body}${url ? `\n\nView your order: ${url}` : ""}\n\n${brand.name}`,
   };
 }
 

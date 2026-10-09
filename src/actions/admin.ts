@@ -23,6 +23,7 @@ import {
   upsertOption,
 } from "@/server/admin";
 import { type ActionState, toActionError } from "./result";
+import { catalogChangedByAdmin } from "@/server/cache-tags";
 
 /*
  * Admin server actions. EVERY action starts with `await requireAdmin()`
@@ -185,6 +186,7 @@ export async function saveProductAction(productId: string | null, _prev: ActionS
       sortOrder: Number(formData.get("sortOrder") ?? 0),
     };
     const savedId = productId ? (await updateProduct(actor, id.parse(productId), input), productId) : await createProduct(actor, input);
+    catalogChangedByAdmin();
     refresh();
     return { ok: true, message: "Product saved.", productId: savedId, savedAt: Date.now() };
   } catch (error) {
@@ -203,6 +205,7 @@ export async function saveOptionAction(productId: string, optionId: string | nul
       isActive: bool(formData.get("isActive")),
       sortOrder: Number(formData.get("sortOrder") ?? 0),
     });
+    catalogChangedByAdmin();
     refresh();
     return { ok: true, message: "Finish saved.", savedAt: Date.now() };
   } catch (error) {
@@ -217,6 +220,7 @@ export async function savePricesAction(productId: string, optionId: string | nul
       const amount = money.parse(String(formData.get(currency) ?? ""));
       await setPrice(actor, id.parse(productId), optionId ? id.parse(optionId) : null, currency, amount);
     }
+    catalogChangedByAdmin();
     refresh();
     return { ok: true, message: "Prices saved." };
   } catch (error) {

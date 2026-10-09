@@ -114,19 +114,7 @@ export default function HomePage() {
         </Container>
       </section>
 
-      <section aria-labelledby="stories" className="border-y border-stone bg-sheet">
-        <Container className="py-16">
-          <h2 id="stories" className="text-2xl font-bold tracking-tight sm:text-3xl">
-            What customers say
-          </h2>
-          <div className="mt-6 rounded-card border-2 border-dashed border-stone p-8 text-moss">
-            <p className="font-semibold text-ink">Placeholder</p>
-            <p className="mt-1">Real customer quotes will appear here once customers have given permission to use them. We don&apos;t publish invented reviews.</p>
-          </div>
-        </Container>
-      </section>
-
-      <section id="faq">
+      <section id="faq" className="border-t border-stone">
         <Container className="grid gap-10 py-16 md:grid-cols-[1fr_2fr] md:py-20">
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Questions</h2>
           <dl className="divide-y divide-stone border-y border-stone">

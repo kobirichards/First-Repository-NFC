@@ -4,6 +4,7 @@ import { OptionForm, PriceForm, ProductForm } from "@/components/admin/product-f
 import { PageHeader, Section } from "@/components/admin/ui";
 import { NotFoundError } from "@/server/errors";
 import { getProductForAdmin, requireAdmin } from "@/server/admin";
+import { Loading } from "@/components/ui/loading";
 
 async function ProductAdmin({ params }: { params: PageProps<"/admin/products/[id]">["params"] }) {
   const actor = await requireAdmin();
@@ -50,7 +51,7 @@ async function ProductAdmin({ params }: { params: PageProps<"/admin/products/[id
 
 export default function AdminProductPage(props: PageProps<"/admin/products/[id]">) {
   return (
-    <Suspense fallback={<p className="text-moss">Loading…</p>}>
+    <Suspense fallback={<Loading />}>
       <ProductAdmin params={props.params} />
     </Suspense>
   );

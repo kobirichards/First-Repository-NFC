@@ -4,17 +4,18 @@ import { Suspense } from "react";
 import { SignOutButton } from "@/components/dashboard/sign-out-button";
 import { ButtonLink } from "@/components/ui/button";
 import { analyticsEnabled, viewTotal } from "@/server/analytics";
-import { listOwnCards } from "@/server/cards";
+import { countOwnCards } from "@/server/cards";
 import { getOwnProfile } from "@/server/profiles";
 import { requireUser } from "@/server/session";
+import { Loading } from "@/components/ui/loading";
 
 export const metadata: Metadata = { title: "Your account", robots: { index: false } };
 
 async function Overview() {
   const user = await requireUser("/dashboard");
-  const [profile, cards] = await Promise.all([getOwnProfile(user.id), listOwnCards(user.id)]);
+  const [profile, cardCounts] = await Promise.all([getOwnProfile(user.id), countOwnCards(user.id)]);
   const firstName = user.name.split(" ")[0];
-  const active = cards.filter((c) => c.status === "ACTIVE").length;
+  const { total: cardTotal, active } = cardCounts;
   const views = analyticsEnabled() && profile ? await viewTotal(profile.id) : null;
 
   return (
@@ -56,13 +57,13 @@ async function Overview() {
             Cards
           </h2>
           <p className="mt-2 flex-1 leading-relaxed text-moss">
-            {cards.length === 0
+            {cardTotal === 0
               ? "No cards yet. To add a new card, tap it with your phone or scan its QR code."
-              : `${cards.length} ${cards.length === 1 ? "card" : "cards"}, ${active} active.`}
+              : `${cardTotal} ${cardTotal === 1 ? "card" : "cards"}, ${active} active.`}
           </p>
           <div className="mt-5">
-            <ButtonLink href={cards.length ? "/dashboard/cards" : "/shop"} variant={cards.length ? "primary" : "secondary"}>
-              {cards.length ? "Manage cards" : "Order cards"}
+            <ButtonLink href={cardTotal ? "/dashboard/cards" : "/shop"} variant={cardTotal ? "primary" : "secondary"}>
+              {cardTotal ? "Manage cards" : "Order cards"}
             </ButtonLink>
           </div>
         </section>
@@ -73,7 +74,7 @@ async function Overview() {
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<p className="text-moss">Loading your account…</p>}>
+    <Suspense fallback={<Loading label="Loading your account" />}>
       <Overview />
     </Suspense>
   );

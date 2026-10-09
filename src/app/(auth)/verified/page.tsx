@@ -6,6 +6,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Notice } from "@/components/ui/notice";
 import { safeNextPath } from "@/lib/safe-redirect";
 import { getSessionUser } from "@/server/session";
+import { Loading } from "@/components/ui/loading";
 
 export const metadata: Metadata = { title: "Email confirmed", robots: { index: false } };
 
@@ -36,7 +37,7 @@ async function VerifiedResult({ searchParams }: { searchParams: PageProps<"/veri
 export default function VerifiedPage(props: PageProps<"/verified">) {
   return (
     <AuthPanel title="Confirm your email">
-      <Suspense fallback={<p className="text-moss">Checking your link…</p>}>
+      <Suspense fallback={<Loading label="Checking your link" />}>
         <VerifiedResult searchParams={props.searchParams} />
       </Suspense>
     </AuthPanel>

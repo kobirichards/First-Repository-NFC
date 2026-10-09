@@ -4,11 +4,14 @@ import { reviewProofAction } from "@/actions/admin";
 import { ActionForm, inputClass } from "@/components/admin/forms";
 import { PageHeader, Pill, statusTone } from "@/components/admin/ui";
 import { listProofs, requireAdmin } from "@/server/admin";
+import { Loading } from "@/components/ui/loading";
+import { Pagination } from "@/components/ui/pagination";
+import { parsePage } from "@/server/pagination";
 
 async function Proofs({ searchParams }: { searchParams: PageProps<"/admin/proofs">["searchParams"] }) {
   const actor = await requireAdmin();
-  const { all } = await searchParams;
-  const proofs = await listProofs(actor, all ? undefined : "PENDING");
+  const { all, page } = await searchParams;
+  const { rows: proofs, page: current, hasNext } = await listProofs(actor, all ? undefined : "PENDING", parsePage(page));
   return (
     <>
       <p className="mb-4 text-sm">
@@ -23,7 +26,7 @@ async function Proofs({ searchParams }: { searchParams: PageProps<"/admin/proofs
         )}
       </p>
       {proofs.length === 0 ? (
-        <p className="text-moss">Nothing waiting for review.</p>
+        <p className="text-moss">{current > 1 ? "No more proofs." : all ? "No proofs yet." : "Nothing waiting for review."}</p>
       ) : (
         <ul className="flex flex-col gap-4">
           {proofs.map((p) => {
@@ -67,7 +70,8 @@ async function Proofs({ searchParams }: { searchParams: PageProps<"/admin/proofs
                       <fieldset className="flex flex-wrap gap-4 text-sm">
                         <legend className="sr-only">Decision</legend>
                         <label className="flex items-center gap-2">
-                          <input type="radio" name="decision" value="APPROVED" defaultChecked className="accent-bottle" /> Approve for printing
+                          <input type="radio" name="decision" value="APPROVED" defaultChecked className="accent-bottle" /> Approve for
+                          printing
                         </label>
                         <label className="flex items-center gap-2">
                           <input type="radio" name="decision" value="REJECTED" className="accent-bottle" /> Ask the customer for a change
@@ -85,6 +89,7 @@ async function Proofs({ searchParams }: { searchParams: PageProps<"/admin/proofs
           })}
         </ul>
       )}
+      <Pagination page={current} hasNext={hasNext} pathname="/admin/proofs" params={{ all: all ? "1" : undefined }} label="Proof pages" />
     </>
   );
 }
@@ -92,8 +97,11 @@ async function Proofs({ searchParams }: { searchParams: PageProps<"/admin/proofs
 export default function AdminProofsPage(props: PageProps<"/admin/proofs">) {
   return (
     <>
-      <PageHeader title="Proofs" description="Check printed names, titles and logos before production. Orders start production when all their proofs are approved." />
-      <Suspense fallback={<p className="text-moss">Loading…</p>}>
+      <PageHeader
+        title="Proofs"
+        description="Check printed names, titles and logos before production. Orders start production when all their proofs are approved."
+      />
+      <Suspense fallback={<Loading />}>
         <Proofs searchParams={props.searchParams} />
       </Suspense>
     </>

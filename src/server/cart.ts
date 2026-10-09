@@ -1,6 +1,6 @@
 import "server-only";
 import { and, eq } from "drizzle-orm";
-import { type Currency, MAX_QUANTITY_PER_LINE } from "@/config/commerce";
+import { type Currency, MAX_LINES_PER_CART, MAX_QUANTITY_PER_LINE } from "@/config/commerce";
 import type { Db } from "@/db";
 import { db as defaultDb } from "@/db";
 import { type Customisation, cart, cartItem, product } from "@/db/schema";
@@ -112,11 +112,10 @@ export async function addToCart(
   const customisation = p.customisable ? input.customisation : undefined;
   const hasCustomisation = Boolean(customisation && (customisation.printName || customisation.printTitle || customisation.artworkKey));
 
+  const items = await db.query.cartItem.findMany({ where: eq(cartItem.cartId, cartId) });
   // Plain items of the same kind merge into one line; customised items always get their own line.
   if (!hasCustomisation) {
-    const existing = (await db.query.cartItem.findMany({ where: eq(cartItem.cartId, cartId) })).find(
-      (i) => i.productId === p.id && (i.optionId ?? undefined) === input.optionId && !i.customisation,
-    );
+    const existing = items.find((i) => i.productId === p.id && (i.optionId ?? undefined) === input.optionId && !i.customisation);
     if (existing) {
       const quantity = Math.min(existing.quantity + input.quantity, MAX_QUANTITY_PER_LINE);
       await db.update(cartItem).set({ quantity }).where(eq(cartItem.id, existing.id));
@@ -124,6 +123,9 @@ export async function addToCart(
     }
   }
 
+  if (items.length >= MAX_LINES_PER_CART) {
+    throw new UserFacingError(`Your basket can hold up to ${MAX_LINES_PER_CART} different items. For a bigger order, ask us for a team quote.`);
+  }
   await db.insert(cartItem).values({
     cartId,
     productId: p.id,

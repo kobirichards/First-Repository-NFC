@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { and, eq, isNull, ne } from "drizzle-orm";
 import type { Db } from "@/db";
 import { db as defaultDb } from "@/db";
@@ -155,9 +156,20 @@ export async function getPublicProfileBySlug(slug: string, db: Db = defaultDb): 
  */
 export async function getPublicProfileEntry(slug: string, db: Db = defaultDb): Promise<{ id: string; profile: PublicProfile } | null> {
   if (!/^[a-z0-9-]{1,40}$/.test(slug)) return null;
+  return db === defaultDb ? loadPublishedProfile(slug) : queryPublishedProfile(slug, db);
+}
+
+async function queryPublishedProfile(slug: string, db: Db) {
   const row = await db.query.profile.findFirst({ where: and(eq(profile.slug, slug), eq(profile.isPublished, true)) });
   return row ? { id: row.id, profile: toPublicProfile(row) } : null;
 }
+
+/**
+ * Within one page render the metadata and the page both need the profile;
+ * React's cache() makes that one query. Not cached across requests, so
+ * unpublishing or editing a profile takes effect on the next visit.
+ */
+const loadPublishedProfile = cache((slug: string) => queryPublishedProfile(slug, defaultDb));
 
 /** Cheap existence check used by the proxy to return a real 404 before the page streams. */
 export async function publicProfileExists(slug: string, db: Db = defaultDb): Promise<boolean> {

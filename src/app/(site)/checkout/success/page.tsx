@@ -7,6 +7,7 @@ import { Notice } from "@/components/ui/notice";
 import { readCartId } from "@/server/cart-cookie";
 import { getCheckoutOutcome } from "@/server/orders";
 import { getSessionUser } from "@/server/session";
+import { Loading } from "@/components/ui/loading";
 
 export const metadata: Metadata = { title: "Order confirmation", robots: { index: false } };
 
@@ -75,7 +76,7 @@ async function Outcome({ searchParams }: { searchParams: PageProps<"/checkout/su
 export default function SuccessPage(props: PageProps<"/checkout/success">) {
   return (
     <Container className="py-16">
-      <Suspense fallback={<p className="text-moss">Checking your order…</p>}>
+      <Suspense fallback={<Loading label="Checking your order" />}>
         <Outcome searchParams={props.searchParams} />
       </Suspense>
     </Container>

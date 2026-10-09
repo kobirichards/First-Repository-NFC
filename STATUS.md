@@ -1,6 +1,6 @@
 # Status
 
-_Last updated: all five milestones complete._
+_Last updated: all five milestones complete, plus a launch-readiness pass (security, reliability, performance)._
 
 | Milestone | State |
 |---|---|
@@ -27,14 +27,16 @@ Everything known to be missing, untested or wrong, in rough order of importance.
 | 9 | **NFC chips not yet written or tested on physical cards**; the metal card's on-metal inlay is unverified. | Operational | Test batch per `docs/nfc-programming.md`. |
 | 10 | **Refund webhooks aren't handled** (`charge.refunded`). Refunds are issued in Stripe and recorded by hand in admin. | Gap | Handle `charge.refunded` to record refunds automatically. |
 | 11 | **CSP allows inline scripts** (`'unsafe-inline'`), because Next's bootstrap scripts are inline and nonces would make every page dynamic. | Hardening | Try Next's experimental SRI support, or nonces on dynamic routes. |
-| 12 | **Product page description is streamed**, not in the initial `<head>`, so Lighthouse SEO scores 91 there (search bots get it because Next waits for them). | Minor SEO | Cache product metadata (`"use cache"` + `cacheTag`) so it prerenders. |
+| 12 | **Product page description is streamed**, not in the initial `<head>`, so Lighthouse SEO scores 91 there (search bots get it because Next waits for them). | Minor SEO | The catalogue is now cached (`"use cache"`, tag `catalog`); re-run Lighthouse on a product page to see if this closed it. |
 | 13 | **Changing a profile address breaks old `/p/` links.** Cards are unaffected. | Gap | Keep old slugs and redirect them. |
 | 14 | **A guest basket isn't merged** into the account when someone signs in after adding items. The basket stays with the browser. | Minor UX | Merge carts on sign-in. |
 | 15 | **No admin screen to remove an admin or reset another admin's two-step verification.** | Gap | Add to the `admin:create` CLI or the admin area. Backup codes cover self-recovery. |
 | 16 | **Admin success messages vanish when a form leaves the page** (e.g. an approved proof leaving the queue). The new state is shown, but not a confirmation. | Minor UX | Toast or flash message. |
-| 17 | **Rate-limit client key trusts the first `X-Forwarded-For` hop.** Correct behind Vercel; may be spoofable on other hosts. | Deployment check | Confirm the host's proxy behaviour, or use its trusted client IP header. |
+| 17 | ~~Rate-limit client key trusts the first `X-Forwarded-For` hop.~~ **Fixed:** uses `x-vercel-forwarded-for` on Vercel, `TRUSTED_IP_HEADER` elsewhere, otherwise the last hop; Better Auth uses the same header. | Done | Nothing. |
 | 18 | **The code is on GitHub but not in a folder on your computer.** | Optional | Connect a folder in the desktop app, or `git clone` the repo. |
 | 19 | **One profile per user**; profile photos are cropped automatically (no crop tool). | By design (for now) | Future work if wanted. |
+| 20 | **Dev-only advisory:** `npm audit` reports `braces` (via `eslint-config-next` → `fast-glob`), with no fixed release yet. It only runs when linting your own code; `npm audit --omit=dev` is clean. | Watch | Run `npm audit` monthly; update `eslint-config-next` when a fix ships. |
+| 21 | **Spending caps are set in each provider's dashboard**, not in code. | Account setup | Vercel Spend Management, Neon compute/storage limits, Cloudflare R2 billing alerts, Upstash monthly budget, Resend plan limit, Stripe Radar rules. See README "Spending caps". |
 
 
 ## Accounts and credentials needed before launch
@@ -48,15 +50,47 @@ Everything known to be missing, untested or wrong, in rough order of importance.
 | Resend (or similar) | Account, order and admin emails | `EMAIL_PROVIDER`, `RESEND_API_KEY`, `EMAIL_FROM` |
 | S3-compatible storage (e.g. Cloudflare R2) | Profile photos and logos (private bucket) | `STORAGE_PROVIDER`, `S3_*` |
 | Upstash Redis | Shared rate limiting | `UPSTASH_REDIS_REST_*` |
-| Card printer / NFC supplier | Cards, chips, packaging with claim codes | — |
+| Card printer / NFC supplier | Cards, chips, packaging with claim codes | None |
 
 Plus fresh `BETTER_AUTH_SECRET` and `CLAIM_CODE_SECRET`, the first admin via `npm run admin:create`, and the legal, tax and compliance items in [`docs/launch-checklist.md`](docs/launch-checklist.md).
+
+## Launch-readiness pass
+
+A review against a "doesn't look vibe-coded, isn't insecure" checklist. What changed, and how it's proven:
+
+**Design.** The Next.js default favicon is replaced by the brand mark (`src/app/icon.svg`, `favicon.ico`, `apple-icon.png`). The placeholder "What customers say" block is gone (a test now fails if testimonials, ratings or customer counts appear on the home page). Pill-shaped filter buttons and badges are square-cornered. No em dashes remain in the site's copy. No gradients except the metal-card finishes, no emoji, no stock or generated images, no cursor effects, one hero animation that plays once and stops under reduced motion.
+
+**Security.**
+- Production refuses to start with unsafe settings: placeholder or short secrets, `http://` URLs, a local database, console email, simulated payments, local file storage, relaxed test limits, or any secret named `NEXT_PUBLIC_*` (`src/instrumentation.ts`, `src/server/env-check.ts`, 6 unit tests).
+- Git history and the working tree scanned with gitleaks: no secrets committed.
+- New e2e suite `tests/e2e/security.spec.ts`: security headers on every response, no `X-Powered-By`, no CORS headers for other origins, cross-site sign-in refused (403), source files, `.env`, `.git`, uploads and source maps not served, private downloads need the right account, unsigned webhooks rejected, and HTML typed into a profile is displayed as text, never run.
+- Client IP for rate limits can't be spoofed (issue 17).
+- Basket capped at 20 separate lines (on top of 50 per line).
+
+**Reliability.**
+- Timeouts on every external call: database (connect 5 s, statement 10 s), Stripe 15 s, Resend 10 s, R2 20 s, Upstash 1.5 s.
+- Error boundaries for the site, account area and admin, plus `global-error.tsx`. They show a plain "This page didn't load" with Try again and a reference that matches the server log.
+- Buttons that call the server directly now show a message if the request fails (`src/lib/call-action.ts`); removing a basket item previously failed silently.
+- Uploads over 5 MB or of the wrong type are refused in the browser before uploading (the server still enforces it).
+- Structured JSON error logging (`src/server/log.ts`) for every unhandled server error (`onRequestError`) and every caught failure, with IDs rather than personal data.
+- Loading placeholders (skeleton bars) on every streamed section; empty states on every list.
+- Outbox emails written atomically (fixed a flaky e2e test).
+
+**Performance.**
+- 18 new database indexes (4 single-column ones replaced by composites) for the queries the app actually runs (`drizzle/0003_performance_indexes.sql`).
+- Pagination on every admin list and on the customer's cards and orders, replacing hard caps that silently hid older records.
+- The account overview counts cards in SQL instead of loading them all.
+- The public catalogue is cached and expired on admin edits and stock changes; a public profile is read once per page view instead of twice.
+
+**Dependencies.** Removed unused `nodemailer`; updated `dotenv`; pinned patched versions of `mysql2` and `deepmerge-ts` (pulled in by Better Auth's optional Prisma support, never run here) and of `esbuild` under `drizzle-kit`. `npm audit --omit=dev`: 0 vulnerabilities. Majors not taken: TypeScript 7 and ESLint 10 (not yet supported by Next 16.4's tooling), `@types/node` 26 (we run Node 22).
+
+**Tests:** 130 Vitest (was 119) and 67 Playwright (was 61), all passing.
 
 ## Milestone 5: Polish and launch prep
 
 ### Built
 
-- **Content pages**: About, Contact (form saved as an enquiry, rate-limited, with a hidden honeypot field), and Shipping and returns. The shipping table comes from the same config as checkout, and the page explains the 14-day cancellation right and the exemption for printed cards. **Privacy, Terms and Cookies drafts** describe what the app really does: processors, no cookies on public profiles, and analytics wording that adapts to the flag. Every legal page carries the banner "Draft — requires review by a qualified professional before launch."
+- **Content pages**: About, Contact (form saved as an enquiry, rate-limited, with a hidden honeypot field), and Shipping and returns. The shipping table comes from the same config as checkout, and the page explains the 14-day cancellation right and the exemption for printed cards. **Privacy, Terms and Cookies drafts** describe what the app really does: processors, no cookies on public profiles, and analytics wording that adapts to the flag. Every legal page carries the banner "Draft. A qualified professional must review this page before the site takes orders."
 - **Home page**: use cases (conferences, stands, teams), and a testimonial section clearly labelled as a placeholder (no invented reviews).
 - **SEO**: page titles and descriptions; `robots.txt` (private areas blocked); a `sitemap.xml` built from the database (public pages, products, and only the profiles whose owners opted in); a default Open Graph image; profiles `noindex` unless opted in.
 - **Optional analytics** (`ANALYTICS_ENABLED`, off by default): daily totals of taps per card and views per profile, counted after the response is sent. No IPs, user agents, cookies or identifiers are stored, and obvious bots are skipped. Owners see "N taps in the last 30 days" per card and profile views on their overview.

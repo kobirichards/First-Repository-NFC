@@ -11,19 +11,24 @@ import { NotFoundError, UserFacingError } from "../errors";
 import { ensureOwnProfile } from "../profiles";
 import { recordAudit } from "./audit";
 import { type AdminActor, assertAdmin } from "./guard";
+import { logError } from "@/server/log";
+import { pageRequest, toPaged } from "../pagination";
 
 export type OrderStatus = (typeof orderStatus.enumValues)[number];
 export const ORDER_STATUSES = orderStatus.enumValues;
 
-export async function listOrders(actor: AdminActor, filter: { status?: OrderStatus } = {}, db: Db = defaultDb) {
+export async function listOrders(actor: AdminActor, filter: { status?: OrderStatus; page?: number } = {}, db: Db = defaultDb) {
   assertAdmin(actor);
-  return db.query.order.findMany({
+  const request = pageRequest(filter.page);
+  const rows = await db.query.order.findMany({
     where: filter.status ? eq(order.status, filter.status) : undefined,
-    orderBy: [desc(order.createdAt)],
-    limit: 200,
+    orderBy: [desc(order.createdAt), desc(order.id)],
+    limit: request.limit,
+    offset: request.offset,
     columns: { id: true, reference: true, email: true, status: true, currency: true, total: true, createdAt: true },
     with: { items: { columns: { quantity: true } } },
   });
+  return toPaged(rows, request);
 }
 
 export async function getOrderForAdmin(actor: AdminActor, orderId: string, db: Db = defaultDb) {
@@ -85,7 +90,7 @@ export async function updateOrderStatus(
         body,
         updated.after.userId ? `${env.appUrl}/dashboard/orders/${updated.after.reference}` : null,
       ),
-    ).catch((e: unknown) => console.error("[admin] status email failed:", e instanceof Error ? e.message : e));
+    ).catch((e: unknown) => logError("admin.order_status_email", e, { orderId }));
   }
 }
 

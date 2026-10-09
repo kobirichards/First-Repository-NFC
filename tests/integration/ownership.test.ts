@@ -49,8 +49,8 @@ describe("ownership of profiles and cards", () => {
   });
 
   it("a user only sees their own cards", async () => {
-    expect((await listOwnCards(alice.id)).map((c) => c.id)).toContain(aliceCardId);
-    expect((await listOwnCards(mallory.id)).map((c) => c.id)).not.toContain(aliceCardId);
+    expect((await listOwnCards(alice.id)).rows.map((c) => c.id)).toContain(aliceCardId);
+    expect((await listOwnCards(mallory.id)).rows.map((c) => c.id)).not.toContain(aliceCardId);
   });
 
   it("another user cannot read, rename, redirect, deactivate or reactivate someone else's card", async () => {

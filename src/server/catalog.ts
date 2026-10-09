@@ -4,6 +4,8 @@ import type { Currency } from "@/config/commerce";
 import type { Db } from "@/db";
 import { db as defaultDb } from "@/db";
 import { product, productOption } from "@/db/schema";
+import { cacheLife, cacheTag } from "next/cache";
+import { CATALOG_TAG } from "./cache-tags";
 
 export type CatalogOption = { id: string; slug: string; name: string; description: string | null; price: number | null; inStock: boolean };
 export type CatalogProduct = {
@@ -18,9 +20,26 @@ export type CatalogProduct = {
   fromPrice: number | null;
 };
 
-type ProductRow = Awaited<ReturnType<typeof loadProducts>>[number];
+type ProductRow = Awaited<ReturnType<typeof queryProducts>>[number];
 
-async function loadProducts(db: Db, slug?: string) {
+/**
+ * The live catalogue is read on every shop page, so it's cached and tagged
+ * "catalog". Admin edits and stock changes expire the tag (see cache-tags.ts).
+ * Prices shown here are for display: the basket and checkout always re-read
+ * them from the database.
+ */
+async function loadCachedProducts(slug?: string) {
+  "use cache";
+  cacheTag(CATALOG_TAG);
+  cacheLife("hours");
+  return queryProducts(defaultDb, slug);
+}
+
+function loadProducts(db: Db, slug?: string) {
+  return db === defaultDb ? loadCachedProducts(slug) : queryProducts(db, slug);
+}
+
+async function queryProducts(db: Db, slug?: string) {
   return db.query.product.findMany({
     where: slug ? and(eq(product.isActive, true), eq(product.slug, slug)) : eq(product.isActive, true),
     orderBy: [asc(product.sortOrder), asc(product.name)],

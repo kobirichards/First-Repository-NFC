@@ -6,6 +6,7 @@ import { type Currency, formatMoney } from "@/config/commerce";
 import { orderStatusLabel } from "@/lib/order-status";
 import { NotFoundError } from "@/server/errors";
 import { getCustomer, requireAdmin } from "@/server/admin";
+import { Loading } from "@/components/ui/loading";
 
 async function Customer({ params }: { params: PageProps<"/admin/customers/[id]">["params"] }) {
   const actor = await requireAdmin();
@@ -87,7 +88,7 @@ async function Customer({ params }: { params: PageProps<"/admin/customers/[id]">
 
 export default function AdminCustomerPage(props: PageProps<"/admin/customers/[id]">) {
   return (
-    <Suspense fallback={<p className="text-moss">Loading…</p>}>
+    <Suspense fallback={<Loading />}>
       <Customer params={props.params} />
     </Suspense>
   );

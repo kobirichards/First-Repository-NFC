@@ -4,6 +4,8 @@ import { useActionState, useRef, useState, useTransition } from "react";
 import { removePhotoAction, uploadPhotoAction } from "@/actions/profile";
 import type { ActionState } from "@/actions/result";
 import { Button } from "@/components/ui/button";
+import { uploadProblem } from "@/config/uploads";
+import { callAction } from "@/lib/call-action";
 
 export function PhotoForm({ photoSrc, initials }: { photoSrc: string | null; initials: string }) {
   const [state, dispatch] = useActionState<ActionState, FormData>(uploadPhotoAction, {});
@@ -36,6 +38,12 @@ export function PhotoForm({ photoSrc, initials }: { photoSrc: string | null; ini
             onChange={(event) => {
               const file = event.currentTarget.files?.[0];
               if (!file) return;
+              const problem = uploadProblem(file);
+              if (problem) {
+                setRemoveState({ ok: false, message: problem });
+                event.currentTarget.value = "";
+                return;
+              }
               const data = new FormData();
               data.set("photo", file);
               setRemoveState({});
@@ -50,7 +58,11 @@ export function PhotoForm({ photoSrc, initials }: { photoSrc: string | null; ini
             <Button
               variant="quiet"
               disabled={pending}
-              onClick={() => startTransition(async () => setRemoveState(await removePhotoAction()))}
+              onClick={() =>
+                startTransition(async () => {
+                  setRemoveState(await callAction(() => removePhotoAction()));
+                })
+              }
             >
               Remove
             </Button>

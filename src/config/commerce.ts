@@ -38,6 +38,9 @@ export const productionDays = { plain: { min: 1, max: 2 }, customised: { min: 3,
 /** Above this many cards in one line, we point people to the teams page. */
 export const MAX_QUANTITY_PER_LINE = 50;
 
+/** Separate lines (e.g. differently personalised cards) per basket. Keeps checkout well under Stripe's 100-line limit. */
+export const MAX_LINES_PER_CART = 20;
+
 /**
  * Stripe Tax: set STRIPE_TAX_ENABLED=true once tax registrations are configured
  * in the Stripe dashboard. Until then, Checkout collects no tax and UK/EU

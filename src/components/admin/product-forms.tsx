@@ -98,7 +98,7 @@ export function PriceForm({ productId, optionId, prices, label }: { productId: s
       {CURRENCIES.map((c) => (
         <label key={c} className="flex flex-col gap-1 text-xs font-medium">
           {c}
-          <input name={c} inputMode="decimal" defaultValue={prices[c] === undefined ? "" : (prices[c]! / 100).toFixed(2)} placeholder="—" className={`${inputClass} w-24`} />
+          <input name={c} inputMode="decimal" defaultValue={prices[c] === undefined ? "" : (prices[c]! / 100).toFixed(2)} placeholder="Not sold" className={`${inputClass} w-24`} />
         </label>
       ))}
     </ActionForm>

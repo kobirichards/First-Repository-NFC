@@ -21,7 +21,7 @@ export function Prose({ title, intro, children, updated }: { title: string; intr
 export function DraftBanner() {
   return (
     <div role="note" className="border-b border-[#e3cf9f] bg-[#f6ecd6] px-4 py-3 text-center text-sm font-semibold text-[#5c420f]">
-      Draft — requires review by a qualified professional before launch.
+      Draft. A qualified professional must review this page before the site takes orders.
     </div>
   );
 }

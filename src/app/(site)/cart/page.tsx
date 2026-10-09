@@ -11,6 +11,7 @@ import { readCartId } from "@/server/cart-cookie";
 import { getCurrency } from "@/server/currency";
 import { paymentsProviderName } from "@/server/payments";
 import { getSessionUser } from "@/server/session";
+import { Loading } from "@/components/ui/loading";
 
 export const metadata: Metadata = { title: "Basket", robots: { index: false } };
 
@@ -118,7 +119,7 @@ export default function CartPage(props: PageProps<"/cart">) {
   return (
     <Container className="py-12">
       <h1 className="mb-8 text-3xl font-bold tracking-tight">Basket</h1>
-      <Suspense fallback={<p className="text-moss">Loading your basket…</p>}>
+      <Suspense fallback={<Loading label="Loading your basket" />}>
         <Cart searchParams={props.searchParams} />
       </Suspense>
     </Container>

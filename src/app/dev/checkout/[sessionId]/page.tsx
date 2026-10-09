@@ -9,6 +9,7 @@ import { db } from "@/db";
 import { checkoutSession } from "@/db/schema";
 import { simulatedPaymentsEnabled } from "@/server/payments";
 import { getSessionUser } from "@/server/session";
+import { Loading } from "@/components/ui/loading";
 
 export const metadata: Metadata = { title: "Simulated checkout", robots: { index: false } };
 
@@ -59,7 +60,7 @@ async function Checkout({ params }: { params: PageProps<"/dev/checkout/[sessionI
 
 export default function SimulatedCheckoutPage(props: PageProps<"/dev/checkout/[sessionId]">) {
   return (
-    <Suspense fallback={<p className="p-8 text-moss">Loading…</p>}>
+    <Suspense fallback={<Loading />}>
       <Checkout params={props.params} />
     </Suspense>
   );

@@ -8,6 +8,7 @@ import { Button, buttonClass } from "@/components/ui/button";
 import { Checkbox, Field } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
 import { type Currency, MAX_QUANTITY_PER_LINE, formatMoney } from "@/config/commerce";
+import { uploadProblem } from "@/config/uploads";
 import { CardIllustration } from "./card-illustration";
 
 type Option = { id: string; slug: string; name: string; description: string | null; price: number | null; inStock: boolean };
@@ -154,11 +155,21 @@ export function ProductForm({
                     onChange={(e) => {
                       const file = e.currentTarget.files?.[0];
                       if (!file) return;
+                      const problem = uploadProblem(file);
+                      if (problem) {
+                        setArtwork({ message: problem, ok: false });
+                        e.currentTarget.value = "";
+                        return;
+                      }
                       const data = new FormData();
                       data.set("artwork", file);
                       startUpload(async () => {
-                        const result = await uploadArtworkAction(data);
-                        setArtwork({ key: result.artworkKey, message: result.message, ok: result.ok });
+                        try {
+                          const result = await uploadArtworkAction(data);
+                          setArtwork({ key: result.artworkKey, message: result.message, ok: result.ok });
+                        } catch {
+                          setArtwork({ message: "The upload didn't finish. Check your connection and try again.", ok: false });
+                        }
                       });
                     }}
                   />

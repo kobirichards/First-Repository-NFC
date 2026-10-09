@@ -2,17 +2,22 @@ import { Suspense } from "react";
 import { CreateBatchForm, RegenerateCodesButton } from "@/components/admin/batch-forms";
 import { PageHeader, Section, Table, adminDate } from "@/components/admin/ui";
 import { listBatches, requireAdmin } from "@/server/admin";
+import { Loading } from "@/components/ui/loading";
+import { Pagination } from "@/components/ui/pagination";
+import { parsePage } from "@/server/pagination";
 
-async function Batches() {
+async function Batches({ searchParams }: { searchParams: PageProps<"/admin/batches">["searchParams"] }) {
   const actor = await requireAdmin();
-  const batches = await listBatches(actor);
+  const { rows: batches, page, hasNext } = await listBatches(actor, parsePage((await searchParams).page));
   return (
     <div className="flex flex-col gap-6">
       <Section title="New batch">
         <CreateBatchForm />
       </Section>
       {batches.length === 0 ? (
-        <p className="text-moss">No batches yet.</p>
+        <p className="text-moss">
+          {page > 1 ? "No more batches." : "No batches yet. Create one above to get cards and claim codes for printing."}
+        </p>
       ) : (
         <Table caption="Card batches">
           <thead>
@@ -47,6 +52,7 @@ async function Batches() {
           </tbody>
         </Table>
       )}
+      <Pagination page={page} hasNext={hasNext} pathname="/admin/batches" label="Batch pages" />
       <p className="text-sm text-moss">
         Writing the chips is a manual step: see docs/nfc-programming.md. Each card&apos;s chip must hold exactly the URL in the CSV.
       </p>
@@ -54,12 +60,12 @@ async function Batches() {
   );
 }
 
-export default function BatchesPage() {
+export default function BatchesPage(props: PageProps<"/admin/batches">) {
   return (
     <>
       <PageHeader title="Card batches" description="Generate card links and claim codes for the printer." />
-      <Suspense fallback={<p className="text-moss">Loading…</p>}>
-        <Batches />
+      <Suspense fallback={<Loading />}>
+        <Batches searchParams={props.searchParams} />
       </Suspense>
     </>
   );

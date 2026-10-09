@@ -9,6 +9,7 @@ import { env } from "@/config/env";
 import { photoUrl } from "@/server/links";
 import { ensureOwnProfile } from "@/server/profiles";
 import { requireUser } from "@/server/session";
+import { Loading } from "@/components/ui/loading";
 
 export const metadata: Metadata = { title: "Your profile", robots: { index: false } };
 
@@ -69,7 +70,7 @@ async function Editor() {
 
 export default function ProfilePage() {
   return (
-    <Suspense fallback={<p className="text-moss">Loading your profile…</p>}>
+    <Suspense fallback={<Loading label="Loading your profile" />}>
       <Editor />
     </Suspense>
   );

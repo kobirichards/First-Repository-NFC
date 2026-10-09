@@ -11,6 +11,8 @@ import * as schema from "@/db/schema";
 import { sendEmail } from "@/server/email";
 import { adminMagicLinkRefusedMessage, changeEmailMessage, magicLinkMessage, resetPasswordMessage, verifyEmailMessage } from "@/server/email/templates";
 import { prepareAccountDeletion } from "@/server/account";
+import { logError } from "@/server/log";
+import { trustedIpHeaders } from "@/server/client-ip";
 
 /** Relaxed limits are only honoured when APP_ENV=test (the e2e suite). */
 const relaxLimits = env.appEnv === "test" && process.env.E2E_RELAX_RATE_LIMITS === "true";
@@ -19,7 +21,7 @@ const limit = (window: number, max: number) => ({ window, max: relaxLimits ? max
 /** Fire-and-forget so response timing doesn't reveal whether an account exists. */
 function deliver(message: Parameters<typeof sendEmail>[0]) {
   void sendEmail(message).catch((error: unknown) => {
-    console.error("[email] delivery failed:", error instanceof Error ? error.message : "unknown error");
+    logError("auth.email_delivery", error, { tag: message.tag });
   });
 }
 
@@ -95,6 +97,8 @@ export const auth = betterAuth({
   advanced: {
     useSecureCookies: env.appUrl.startsWith("https://"),
     defaultCookieAttributes: { httpOnly: true, sameSite: "lax", secure: env.appUrl.startsWith("https://") },
+    // Same trusted header as the app's own rate limits (see src/server/client-ip.ts).
+    ipAddress: { ipAddressHeaders: trustedIpHeaders() },
   },
   plugins: [
     magicLink({

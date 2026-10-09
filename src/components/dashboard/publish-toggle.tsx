@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { setPublishedAction } from "@/actions/profile";
 import { Button } from "@/components/ui/button";
+import { callAction } from "@/lib/call-action";
 
 export function PublishToggle({ published }: { published: boolean }) {
   const [pending, startTransition] = useTransition();
@@ -14,7 +15,7 @@ export function PublishToggle({ published }: { published: boolean }) {
         disabled={pending}
         onClick={() =>
           startTransition(async () => {
-            const result = await setPublishedAction(!published);
+            const result = await callAction(() => setPublishedAction(!published));
             setError(result.ok ? null : (result.message ?? null));
           })
         }

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { strToU8, zipSync } from "fflate";
 import type { Db } from "@/db";
 import { db as defaultDb } from "@/db";
@@ -9,6 +9,7 @@ import { UserFacingError } from "../errors";
 import { cardUrl } from "../links";
 import { qrSvg } from "../qr";
 import { generateCardToken, generateClaimCode, hashClaimCode } from "../cards/tokens";
+import { pageRequest, toPaged } from "../pagination";
 import { recordAudit } from "./audit";
 import { type AdminActor, assertAdmin } from "./guard";
 
@@ -61,21 +62,35 @@ export async function regenerateClaimCodes(actor: AdminActor, batchId: string, s
   return { csv: printerCsv(rows), filename: `batch-${batchId.slice(0, 8)}-new-claim-codes.csv` };
 }
 
-export async function listBatches(actor: AdminActor, db: Db = defaultDb) {
+export async function listBatches(actor: AdminActor, page = 1, db: Db = defaultDb) {
   assertAdmin(actor);
-  const batches = await db.query.cardBatch.findMany({
-    orderBy: [desc(cardBatch.createdAt)],
-    with: { createdBy: { columns: { email: true } } },
-  });
-  const counts = await db
-    .select({ batchId: card.batchId, status: card.status, n: sql<number>`count(*)::int` })
-    .from(card)
-    .groupBy(card.batchId, card.status);
-  return batches.map((b) => {
-    const mine = counts.filter((c) => c.batchId === b.id);
-    const count = (s: string) => mine.find((c) => c.status === s)?.n ?? 0;
-    return { ...b, unclaimed: count("UNCLAIMED"), active: count("ACTIVE"), deactivated: count("DEACTIVATED") };
-  });
+  const request = pageRequest(page);
+  const batches = toPaged(
+    await db.query.cardBatch.findMany({
+      orderBy: [desc(cardBatch.createdAt), desc(cardBatch.id)],
+      limit: request.limit,
+      offset: request.offset,
+      with: { createdBy: { columns: { email: true } } },
+    }),
+    request,
+  );
+  const ids = batches.rows.map((b) => b.id);
+  // One grouped count for just the batches on this page (uses the card.batch_id index).
+  const counts = ids.length
+    ? await db
+        .select({ batchId: card.batchId, status: card.status, n: sql<number>`count(*)::int` })
+        .from(card)
+        .where(inArray(card.batchId, ids))
+        .groupBy(card.batchId, card.status)
+    : [];
+  return {
+    ...batches,
+    rows: batches.rows.map((b) => {
+      const mine = counts.filter((c) => c.batchId === b.id);
+      const count = (s: string) => mine.find((c) => c.status === s)?.n ?? 0;
+      return { ...b, unclaimed: count("UNCLAIMED"), active: count("ACTIVE"), deactivated: count("DEACTIVATED") };
+    }),
+  };
 }
 
 /** Zip of one SVG QR code per card plus a CSV without claim codes. Safe to download any time. */

@@ -15,7 +15,7 @@ type Mail = { to: string; subject: string; text: string; html: string; tag: stri
 export async function waitForEmail(to: string, tag: string, timeoutMs = 10_000): Promise<Mail> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const files = (await readdir(OUTBOX).catch(() => [] as string[])).filter((f) => f.includes(`-${tag}-`)).sort().reverse();
+    const files = (await readdir(OUTBOX).catch(() => [] as string[])).filter((f) => f.includes(`-${tag}-`) && f.endsWith(".json")).sort().reverse();
     for (const file of files) {
       const mail = JSON.parse(await readFile(path.join(OUTBOX, file), "utf8")) as Mail;
       if (mail.to === to) return mail;

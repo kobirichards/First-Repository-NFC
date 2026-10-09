@@ -4,12 +4,15 @@ import { PageHeader, Pill, Table, adminDate, statusTone } from "@/components/adm
 import { type Currency, formatMoney } from "@/config/commerce";
 import { orderStatusLabel } from "@/lib/order-status";
 import { ORDER_STATUSES, type OrderStatus, listOrders, requireAdmin } from "@/server/admin";
+import { Loading } from "@/components/ui/loading";
+import { Pagination } from "@/components/ui/pagination";
+import { parsePage } from "@/server/pagination";
 
 async function Orders({ searchParams }: { searchParams: PageProps<"/admin/orders">["searchParams"] }) {
   const actor = await requireAdmin();
-  const { status } = await searchParams;
+  const { status, page } = await searchParams;
   const filter = ORDER_STATUSES.includes(status as OrderStatus) ? (status as OrderStatus) : undefined;
-  const orders = await listOrders(actor, { status: filter });
+  const { rows: orders, page: current, hasNext } = await listOrders(actor, { status: filter, page: parsePage(page) });
   return (
     <>
       <nav aria-label="Filter by status" className="mb-4 flex flex-wrap gap-2 text-sm">
@@ -18,14 +21,14 @@ async function Orders({ searchParams }: { searchParams: PageProps<"/admin/orders
             key={s ?? "all"}
             href={s ? `/admin/orders?status=${s}` : "/admin/orders"}
             aria-current={s === filter ? "page" : undefined}
-            className="rounded-full border border-stone px-3 py-1 aria-[current=page]:border-bottle aria-[current=page]:bg-bottle aria-[current=page]:text-white"
+            className="rounded-control border border-stone px-3 py-1 aria-[current=page]:border-bottle aria-[current=page]:bg-bottle aria-[current=page]:text-white"
           >
             {s ? orderStatusLabel[s].label : "All"}
           </Link>
         ))}
       </nav>
       {orders.length === 0 ? (
-        <p className="text-moss">No orders{filter ? " with this status" : " yet"}.</p>
+        <p className="text-moss">{current > 1 ? "No more orders." : `No orders${filter ? " with this status" : " yet"}.`}</p>
       ) : (
         <Table caption="Orders">
           <thead>
@@ -58,6 +61,7 @@ async function Orders({ searchParams }: { searchParams: PageProps<"/admin/orders
           </tbody>
         </Table>
       )}
+      <Pagination page={current} hasNext={hasNext} pathname="/admin/orders" params={{ status: filter }} label="Order pages" />
     </>
   );
 }
@@ -66,7 +70,7 @@ export default function AdminOrdersPage(props: PageProps<"/admin/orders">) {
   return (
     <>
       <PageHeader title="Orders" />
-      <Suspense fallback={<p className="text-moss">Loading…</p>}>
+      <Suspense fallback={<Loading />}>
         <Orders searchParams={props.searchParams} />
       </Suspense>
     </>

@@ -32,7 +32,7 @@ const tones: Record<string, string> = {
 };
 
 export function Pill({ children, tone = "neutral" }: { children: ReactNode; tone?: keyof typeof tones }) {
-  return <span className={cn("inline-block rounded-full px-2 py-0.5 text-xs font-semibold whitespace-nowrap", tones[tone])}>{children}</span>;
+  return <span className={cn("inline-block rounded-[3px] px-1.5 py-0.5 text-xs font-semibold whitespace-nowrap", tones[tone])}>{children}</span>;
 }
 
 export function Section({ title, children, className }: { title: string; children: ReactNode; className?: string }) {

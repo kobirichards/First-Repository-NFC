@@ -22,6 +22,7 @@ export class ResendEmailSender implements EmailSender {
         html: message.html,
         tags: [{ name: "type", value: message.tag }],
       }),
+      signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) {
       // Don't log the recipient or body: they are personal data.

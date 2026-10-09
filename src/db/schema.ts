@@ -34,22 +34,27 @@ const updatedAt = () =>
 // Auth (Better Auth tables, incl. admin + two-factor plugin fields)
 // ---------------------------------------------------------------------------
 
-export const user = pgTable("user", {
-  id: text().primaryKey(),
-  name: text().notNull(),
-  email: text().notNull().unique(),
-  emailVerified: boolean().notNull().default(false),
-  image: text(),
-  createdAt: createdAt(),
-  updatedAt: updatedAt(),
-  // admin plugin
-  role: text().default("user"),
-  banned: boolean().default(false),
-  banReason: text(),
-  banExpires: timestamp({ withTimezone: true }),
-  // two-factor plugin
-  twoFactorEnabled: boolean().default(false),
-});
+export const user = pgTable(
+  "user",
+  {
+    id: text().primaryKey(),
+    name: text().notNull(),
+    email: text().notNull().unique(),
+    emailVerified: boolean().notNull().default(false),
+    image: text(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    // admin plugin
+    role: text().default("user"),
+    banned: boolean().default(false),
+    banReason: text(),
+    banExpires: timestamp({ withTimezone: true }),
+    // two-factor plugin
+    twoFactorEnabled: boolean().default(false),
+  },
+  // Admin customer list is sorted newest first.
+  (t) => [index().on(t.createdAt)],
+);
 
 export const session = pgTable(
   "session",
@@ -173,15 +178,19 @@ export const profile = pgTable(
 export const cardStatus = pgEnum("card_status", ["UNCLAIMED", "ACTIVE", "DEACTIVATED"]);
 export const cardDestination = pgEnum("card_destination", ["PROFILE", "LINKEDIN"]);
 
-export const cardBatch = pgTable("card_batch", {
-  id: id(),
-  label: text().notNull(),
-  quantity: integer().notNull(),
-  createdById: text().references(() => user.id, { onDelete: "set null" }),
-  /** Set once the one-time CSV (which contains plain claim codes) has been downloaded. */
-  exportedAt: timestamp({ withTimezone: true }),
-  createdAt: createdAt(),
-});
+export const cardBatch = pgTable(
+  "card_batch",
+  {
+    id: id(),
+    label: text().notNull(),
+    quantity: integer().notNull(),
+    createdById: text().references(() => user.id, { onDelete: "set null" }),
+    /** Set once the one-time CSV (which contains plain claim codes) has been downloaded. */
+    exportedAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.createdAt)],
+);
 
 export const card = pgTable(
   "card",
@@ -211,6 +220,10 @@ export const card = pgTable(
     index().on(t.profileId),
     index().on(t.batchId),
     index().on(t.organisationId),
+    index().on(t.orderItemId),
+    // Admin card list (newest first) and "next unclaimed card from stock" (oldest first).
+    index().on(t.status, t.createdAt),
+    index().on(t.createdAt),
   ],
 );
 
@@ -300,7 +313,8 @@ export const cart = pgTable(
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [index().on(t.userId)],
+  // Abandoned guest baskets are cleaned up by age.
+  (t) => [index().on(t.userId), index().on(t.updatedAt)],
 );
 
 export type Customisation = { printName?: string; printTitle?: string; artworkKey?: string };
@@ -320,7 +334,7 @@ export const cartItem = pgTable(
     customisation: jsonb().$type<Customisation>(),
     createdAt: createdAt(),
   },
-  (t) => [index().on(t.cartId)],
+  (t) => [index().on(t.cartId), index().on(t.productId)],
 );
 
 export const orderStatus = pgEnum("order_status", [
@@ -358,7 +372,7 @@ export const order = pgTable(
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [index().on(t.userId), index().on(t.status)],
+  (t) => [index().on(t.userId, t.createdAt), index().on(t.status, t.createdAt), index().on(t.createdAt)],
 );
 
 export const orderItem = pgTable(
@@ -414,7 +428,7 @@ export const artworkProof = pgTable(
     reviewedAt: timestamp({ withTimezone: true }),
     createdAt: createdAt(),
   },
-  (t) => [index().on(t.orderItemId)],
+  (t) => [index().on(t.orderItemId), index().on(t.status, t.createdAt)],
 );
 
 export type CheckoutSnapshotLine = {
@@ -449,7 +463,7 @@ export const checkoutSession = pgTable(
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [index().on(t.userId)],
+  (t) => [index().on(t.userId), index().on(t.status, t.createdAt)],
 );
 
 /** Processed Stripe webhook event IDs, for idempotency. */
@@ -482,7 +496,7 @@ export const enquiry = pgTable(
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [index().on(t.status)],
+  (t) => [index().on(t.status, t.createdAt), index().on(t.createdAt)],
 );
 
 export const auditEvent = pgTable(
@@ -498,7 +512,7 @@ export const auditEvent = pgTable(
     after: jsonb(),
     createdAt: createdAt(),
   },
-  (t) => [index().on(t.entityType, t.entityId), index().on(t.createdAt)],
+  (t) => [index().on(t.entityType, t.entityId, t.createdAt), index().on(t.createdAt), index().on(t.actorId)],
 );
 
 /** Aggregate counts only. No IPs, user agents or visitor identifiers. */
@@ -513,7 +527,12 @@ export const dailyStat = pgTable(
     profileId: text().references(() => profile.id, { onDelete: "cascade" }),
     count: integer().notNull().default(0),
   },
-  (t) => [unique().on(t.day, t.kind, t.cardId, t.profileId).nullsNotDistinct()],
+  (t) => [
+    unique().on(t.day, t.kind, t.cardId, t.profileId).nullsNotDistinct(),
+    // Per-card and per-profile totals for the dashboard.
+    index().on(t.cardId, t.day),
+    index().on(t.profileId, t.day),
+  ],
 );
 
 // ---------------------------------------------------------------------------

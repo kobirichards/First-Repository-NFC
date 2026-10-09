@@ -10,6 +10,7 @@ import { sendEmail } from "@/server/email";
 import { enquiryNotificationMessage } from "@/server/email/templates";
 import { checkLimit, clientKey } from "@/server/rate-limit";
 import { type ActionState, toActionError } from "./result";
+import { logError } from "@/server/log";
 
 export async function submitEnquiryAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
@@ -32,7 +33,7 @@ export async function submitEnquiryAction(_prev: ActionState, formData: FormData
     });
     const notify = process.env.ENQUIRY_NOTIFY_EMAIL ?? brand.supportEmail;
     void sendEmail(enquiryNotificationMessage(notify, input)).catch((e: unknown) =>
-      console.error("[enquiry] notification failed:", e instanceof Error ? e.message : e),
+      logError("enquiry.notification_email", e),
     );
     return { ok: true, message: "Thanks. We'll be in touch within one working day." };
   } catch (error) {
@@ -52,7 +53,7 @@ export async function submitContactAction(_prev: ActionState, formData: FormData
     await db.insert(enquiry).values({ kind: "contact", name: input.name, email: input.email, message });
     const notify = process.env.ENQUIRY_NOTIFY_EMAIL ?? brand.supportEmail;
     void sendEmail(enquiryNotificationMessage(notify, { name: input.name, email: input.email, message })).catch((e: unknown) =>
-      console.error("[contact] notification failed:", e instanceof Error ? e.message : e),
+      logError("contact.notification_email", e),
     );
     return { ok: true, message: "Thanks. We'll reply within one working day." };
   } catch (error) {

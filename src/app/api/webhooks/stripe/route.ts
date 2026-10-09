@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { processPaymentEvent } from "@/server/orders";
 import { StripeProvider } from "@/server/payments/stripe";
 import { WebhookVerificationError } from "@/server/payments/types";
+import { logError } from "@/server/log";
 
 /**
  * Stripe webhook endpoint. Orders are created here, from verified events
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ received: true, status: result.status });
   } catch (error) {
     // 500 makes Stripe retry; the transaction rolled back, so the retry starts clean.
-    console.error("[webhook] processing failed:", error instanceof Error ? error.message : error);
+    logError("webhook.stripe", error, { kind: event.kind, eventId: event.eventId });
     return Response.json({ error: "Processing failed" }, { status: 500 });
   }
 }

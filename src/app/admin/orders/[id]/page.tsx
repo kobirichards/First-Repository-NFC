@@ -8,6 +8,7 @@ import { type Currency, formatMoney } from "@/config/commerce";
 import { orderStatusLabel } from "@/lib/order-status";
 import { NotFoundError } from "@/server/errors";
 import { ORDER_STATUSES, getOrderForAdmin, listAuditEvents, requireAdmin } from "@/server/admin";
+import { Loading } from "@/components/ui/loading";
 
 async function OrderAdmin({ params }: { params: PageProps<"/admin/orders/[id]">["params"] }) {
   const actor = await requireAdmin();
@@ -20,7 +21,7 @@ async function OrderAdmin({ params }: { params: PageProps<"/admin/orders/[id]">[
     throw error;
   }
   const c = o.currency as Currency;
-  const history = await listAuditEvents(actor, { entityType: "order", entityId: o.id, limit: 50 });
+  const { rows: history } = await listAuditEvents(actor, { entityType: "order", entityId: o.id, size: 50 });
   const address = o.shippingAddress as Record<string, string | null> | null;
   const refunded = o.refunds.reduce((n, r) => n + r.amount, 0);
 
@@ -172,7 +173,7 @@ async function OrderAdmin({ params }: { params: PageProps<"/admin/orders/[id]">[
 
 export default function AdminOrderPage(props: PageProps<"/admin/orders/[id]">) {
   return (
-    <Suspense fallback={<p className="text-moss">Loading…</p>}>
+    <Suspense fallback={<Loading />}>
       <OrderAdmin params={props.params} />
     </Suspense>
   );

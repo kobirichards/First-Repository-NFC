@@ -4,6 +4,7 @@ import { PageHeader, Pill, Table } from "@/components/admin/ui";
 import { buttonClass } from "@/components/ui/button";
 import { type Currency, formatMoney } from "@/config/commerce";
 import { listProductsForAdmin, requireAdmin } from "@/server/admin";
+import { Loading } from "@/components/ui/loading";
 
 async function Products() {
   const actor = await requireAdmin();
@@ -53,7 +54,7 @@ export default function AdminProductsPage() {
           </Link>
         }
       />
-      <Suspense fallback={<p className="text-moss">Loading…</p>}>
+      <Suspense fallback={<Loading />}>
         <Products />
       </Suspense>
     </>

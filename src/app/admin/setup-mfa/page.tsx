@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { MfaSetup } from "@/components/admin/mfa-setup";
 import { requireAdminPendingMfa } from "@/server/admin";
+import { Loading } from "@/components/ui/loading";
 
 export const metadata: Metadata = { title: "Set up two-step verification", robots: { index: false } };
 
@@ -21,7 +22,7 @@ export default function SetupMfaPage() {
         password. You&apos;ll need it every time you sign in.
       </p>
       <div className="mt-8 rounded-card border border-stone bg-sheet p-6">
-        <Suspense fallback={<p className="text-moss">Loading…</p>}>
+        <Suspense fallback={<Loading />}>
           <Setup />
         </Suspense>
       </div>

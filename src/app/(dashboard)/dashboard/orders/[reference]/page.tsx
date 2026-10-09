@@ -7,6 +7,7 @@ import { orderStatusLabel } from "@/lib/order-status";
 import { NotFoundError } from "@/server/errors";
 import { getOwnOrder } from "@/server/orders";
 import { requireUser } from "@/server/session";
+import { Loading } from "@/components/ui/loading";
 
 export const metadata: Metadata = { title: "Order", robots: { index: false } };
 
@@ -116,7 +117,7 @@ async function OrderDetail({ params }: { params: PageProps<"/dashboard/orders/[r
 
 export default function OrderPage(props: PageProps<"/dashboard/orders/[reference]">) {
   return (
-    <Suspense fallback={<p className="text-moss">Loading order…</p>}>
+    <Suspense fallback={<Loading label="Loading order" />}>
       <OrderDetail params={props.params} />
     </Suspense>
   );

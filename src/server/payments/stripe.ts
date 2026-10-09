@@ -15,7 +15,7 @@ export class StripeProvider implements PaymentProvider {
   private stripe: Stripe;
 
   constructor(secretKey: string) {
-    this.stripe = new Stripe(secretKey, { appInfo: { name: "nfc-cards" }, maxNetworkRetries: 2 });
+    this.stripe = new Stripe(secretKey, { appInfo: { name: "nfc-cards" }, maxNetworkRetries: 2, timeout: 15_000 });
   }
 
   async createCheckout(request: CheckoutRequest): Promise<CheckoutCreated> {

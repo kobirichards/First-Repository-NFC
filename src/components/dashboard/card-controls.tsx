@@ -4,6 +4,7 @@ import { useActionState, useState, useTransition } from "react";
 import { renameCardAction, setActiveAction, setDestinationAction } from "@/actions/cards";
 import type { ActionState } from "@/actions/result";
 import { Button } from "@/components/ui/button";
+import { callAction } from "@/lib/call-action";
 
 export type CardRow = {
   id: string;
@@ -81,7 +82,7 @@ export function CardControls({ card, hasLinkedIn }: { card: CardRow; hasLinkedIn
                   defaultChecked={card.destination === value}
                   disabled={value === "LINKEDIN" && !hasLinkedIn}
                   className="mt-0.5 size-4 accent-bottle"
-                  onChange={() => startTransition(async () => setState(await setDestinationAction(card.id, value)))}
+                  onChange={() => startTransition(async () => setState(await callAction(() => setDestinationAction(card.id, value))))}
                 />
                 <span>
                   {label}
@@ -131,7 +132,7 @@ export function CardControls({ card, hasLinkedIn }: { card: CardRow; hasLinkedIn
                   disabled={pending}
                   onClick={() =>
                     startTransition(async () => {
-                      setState(await setActiveAction(card.id, false));
+                      setState(await callAction(() => setActiveAction(card.id, false)));
                       setConfirming(false);
                     })
                   }
@@ -153,7 +154,7 @@ export function CardControls({ card, hasLinkedIn }: { card: CardRow; hasLinkedIn
             variant="secondary"
             className="self-start"
             disabled={pending}
-            onClick={() => startTransition(async () => setState(await setActiveAction(card.id, true)))}
+            onClick={() => startTransition(async () => setState(await callAction(() => setActiveAction(card.id, true))))}
           >
             Reactivate card
           </Button>

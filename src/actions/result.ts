@@ -1,5 +1,6 @@
 import { ZodError } from "zod";
 import { UserFacingError } from "@/server/errors";
+import { logError } from "@/server/log";
 
 export type ActionState = {
   ok?: boolean;
@@ -24,6 +25,6 @@ export function toActionError(error: unknown): ActionState {
   if (error instanceof UserFacingError) {
     return { ok: false, message: error.message, fieldErrors: error.field ? { [error.field]: error.message } : undefined };
   }
-  console.error("[action] unexpected error:", error instanceof Error ? error.message : error);
+  logError("action.unexpected", error);
   return { ok: false, message: "Something went wrong and nothing was saved. Try again." };
 }

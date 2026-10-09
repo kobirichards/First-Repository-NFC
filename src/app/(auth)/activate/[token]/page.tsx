@@ -5,6 +5,7 @@ import { ClaimForm } from "@/components/auth/claim-form";
 import { ButtonLink } from "@/components/ui/button";
 import { getClaimState } from "@/server/cards";
 import { getSessionUser } from "@/server/session";
+import { Loading } from "@/components/ui/loading";
 
 export const metadata: Metadata = { title: "Activate your card", robots: { index: false } };
 
@@ -74,7 +75,7 @@ async function Activate({ params }: { params: PageProps<"/activate/[token]">["pa
 
 export default function ActivatePage(props: PageProps<"/activate/[token]">) {
   return (
-    <Suspense fallback={<p className="text-moss">Checking this card…</p>}>
+    <Suspense fallback={<Loading label="Checking this card" />}>
       <Activate params={props.params} />
     </Suspense>
   );

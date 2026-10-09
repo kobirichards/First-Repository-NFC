@@ -5,6 +5,7 @@ import { ProfileView } from "@/components/profile/profile-view";
 import { photoUrl } from "@/server/links";
 import { ensureOwnProfile, toPublicProfile } from "@/server/profiles";
 import { requireUser } from "@/server/session";
+import { Loading } from "@/components/ui/loading";
 
 export const metadata: Metadata = { title: "Preview your profile", robots: { index: false } };
 
@@ -37,7 +38,7 @@ async function Preview() {
 
 export default function PreviewPage() {
   return (
-    <Suspense fallback={<p className="text-moss">Loading preview…</p>}>
+    <Suspense fallback={<Loading label="Loading preview" />}>
       <Preview />
     </Suspense>
   );

@@ -6,6 +6,7 @@ import { Container } from "@/components/ui/container";
 import { currencyInfo, formatMoney } from "@/config/commerce";
 import { listProducts } from "@/server/catalog";
 import { getCurrency } from "@/server/currency";
+import { Loading } from "@/components/ui/loading";
 
 export const metadata: Metadata = {
   title: "Shop NFC business cards",
@@ -58,7 +59,7 @@ export default function ShopPage() {
         .
       </p>
       <div className="mt-12">
-        <Suspense fallback={<p className="text-moss">Loading cards…</p>}>
+        <Suspense fallback={<Loading label="Loading cards" />}>
           <Products />
         </Suspense>
       </div>

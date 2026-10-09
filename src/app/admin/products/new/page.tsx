@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { ProductForm } from "@/components/admin/product-forms";
 import { PageHeader, Section } from "@/components/admin/ui";
 import { requireAdmin } from "@/server/admin";
+import { Loading } from "@/components/ui/loading";
 
 async function Guarded() {
   await requireAdmin();
@@ -16,7 +17,7 @@ export default function NewProductPage() {
   return (
     <>
       <PageHeader title="New product" description="It stays hidden from the shop until you tick On sale and set prices." />
-      <Suspense fallback={<p className="text-moss">Loading…</p>}>
+      <Suspense fallback={<Loading />}>
         <Guarded />
       </Suspense>
     </>

@@ -4,7 +4,7 @@ import { query, uniqueEmail } from "./helpers";
 test("legal pages carry the draft banner; info pages load", async ({ page }) => {
   for (const path of ["/privacy", "/terms", "/cookies", "/shipping-returns"]) {
     await page.goto(path);
-    await expect(page.getByRole("note"), path).toHaveText("Draft — requires review by a qualified professional before launch.");
+    await expect(page.getByRole("note"), path).toHaveText("Draft. A qualified professional must review this page before the site takes orders.");
   }
   for (const path of ["/about", "/contact"]) {
     const res = await page.goto(path);
@@ -12,10 +12,13 @@ test("legal pages carry the draft banner; info pages load", async ({ page }) => 
   }
 });
 
-test("home page labels the testimonial section as a placeholder", async ({ page }) => {
+test("home page has no testimonials, ratings or customer counts", async ({ page }) => {
   await page.goto("/");
-  const stories = page.getByRole("region", { name: "What customers say" });
-  await expect(stories.getByText("Placeholder", { exact: true })).toBeVisible();
+  const text = (await page.getByRole("main").innerText()).toLowerCase();
+  for (const phrase of ["what customers say", "testimonial", "rated", "stars", "customers trust", "happy customers", "trusted by"]) {
+    expect(text, phrase).not.toContain(phrase);
+  }
+  expect(text).not.toMatch(/\d[\d,.]*\s*[k+]?\+?\s*(customers|users|cards sold|taps)/);
 });
 
 test("contact form saves the message", async ({ page }) => {

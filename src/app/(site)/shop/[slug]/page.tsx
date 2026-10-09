@@ -7,6 +7,7 @@ import { Container } from "@/components/ui/container";
 import { currencyInfo, productionDays, shippingRates } from "@/config/commerce";
 import { getProduct } from "@/server/catalog";
 import { getCurrency } from "@/server/currency";
+import { Loading } from "@/components/ui/loading";
 
 export async function generateMetadata(props: PageProps<"/shop/[slug]">): Promise<Metadata> {
   const { slug } = await props.params;
@@ -53,7 +54,7 @@ async function Product({ params }: { params: PageProps<"/shop/[slug]">["params"]
 export default function ProductPage(props: PageProps<"/shop/[slug]">) {
   return (
     <Container className="py-12">
-      <Suspense fallback={<p className="text-moss">Loading…</p>}>
+      <Suspense fallback={<Loading />}>
         <Product params={props.params} />
       </Suspense>
     </Container>

@@ -75,6 +75,8 @@ export class S3Storage implements ObjectStorage {
         accessKeyId: process.env.S3_ACCESS_KEY_ID ?? "",
         secretAccessKey: process.env.S3_SECRET_ACCESS_KEY ?? "",
       },
+      maxAttempts: 3,
+      requestHandler: { connectionTimeout: 5_000, requestTimeout: 20_000 },
     });
   }
 

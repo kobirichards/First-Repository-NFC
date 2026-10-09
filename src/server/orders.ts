@@ -19,6 +19,9 @@ import { sendEmail } from "./email";
 import { orderConfirmationMessage } from "./email/templates";
 import { NotFoundError, UserFacingError } from "./errors";
 import type { PaymentEvent, PaymentProvider } from "./payments/types";
+import { logError, logWarn } from "@/server/log";
+import { catalogStockChanged } from "./cache-tags";
+import { pageRequest, toPaged } from "./pagination";
 
 const REF_ALPHABET = "ABCDEFGHJKMNPQRSTVWXYZ23456789";
 export function generateOrderReference() {
@@ -107,7 +110,7 @@ async function fulfilFromSnapshot(
     event.amountSubtotal !== snapshot.subtotal
       ? `Subtotal mismatch: checkout snapshot ${snapshot.subtotal}, provider reported ${event.amountSubtotal}. Check before fulfilling.`
       : null;
-  if (notes) console.warn(`[orders] ${notes} (session ${snapshot.id})`);
+  if (notes) logWarn("orders.snapshot", notes, { checkoutSessionId: snapshot.id });
 
   let reference = generateOrderReference();
   for (let i = 0; i < 5 && (await tx.query.order.findFirst({ where: eq(order.reference, reference), columns: { id: true } })); i++) {
@@ -182,7 +185,7 @@ async function sendConfirmation(orderId: string, db: Db) {
       needsProof: o.status === "AWAITING_PROOF",
       ordersUrl: o.userId ? `${env.appUrl}/dashboard/orders/${o.reference}` : null,
     }),
-  ).catch((error: unknown) => console.error("[orders] confirmation email failed:", error instanceof Error ? error.message : error));
+  ).catch((error: unknown) => logError("orders.confirmation_email", error));
 }
 
 /**
@@ -203,7 +206,7 @@ export async function processPaymentEvent(event: PaymentEvent, db: Db = defaultD
     const snapshot = await tx.query.checkoutSession.findFirst({ where: eq(checkoutSession.id, event.sessionId) });
     if (!snapshot) {
       // Not one of ours (or created before this table existed). Nothing to do, but worth knowing about.
-      console.warn(`[orders] payment event ${event.kind} for unknown checkout session ${event.sessionId}`);
+      logWarn("orders.unknown_session", "Payment event for an unknown checkout session", { kind: event.kind, sessionId: event.sessionId });
       return { status: "ignored" };
     }
 
@@ -224,6 +227,7 @@ export async function processPaymentEvent(event: PaymentEvent, db: Db = defaultD
     }
   });
 
+  if (result.status === "created") catalogStockChanged();
   if (result.sendEmailFor) await sendConfirmation(result.sendEmailFor, db);
   return { status: result.status, orderId: result.orderId };
 }
@@ -232,13 +236,17 @@ export async function processPaymentEvent(event: PaymentEvent, db: Db = defaultD
 // Reading orders
 // ---------------------------------------------------------------------------
 
-export async function listOwnOrders(userId: string, db: Db = defaultDb) {
-  return db.query.order.findMany({
+export async function listOwnOrders(userId: string, page = 1, db: Db = defaultDb) {
+  const request = pageRequest(page, 20);
+  const rows = await db.query.order.findMany({
     where: eq(order.userId, userId),
-    orderBy: [desc(order.createdAt)],
+    orderBy: [desc(order.createdAt), desc(order.id)],
+    limit: request.limit,
+    offset: request.offset,
     columns: { id: true, reference: true, status: true, currency: true, total: true, createdAt: true },
     with: { items: { columns: { quantity: true } } },
   });
+  return toPaged(rows, request);
 }
 
 export async function getOwnOrder(userId: string, reference: string, db: Db = defaultDb) {

@@ -87,6 +87,17 @@ describe("pricing", () => {
     expect(view?.lines.map((l) => l.quantity).sort()).toEqual([1, 3]);
   });
 
+  it("caps the number of separate lines in one basket", async () => {
+    const cartId = await createCart(null, "GBP");
+    for (let i = 0; i < 20; i++) {
+      await addToCart(cartId, { productId: classicId, optionId: blackId, quantity: 1, customisation: { printName: `Person ${i}` } });
+    }
+    await expect(
+      addToCart(cartId, { productId: classicId, optionId: blackId, quantity: 1, customisation: { printName: "One too many" } }),
+    ).rejects.toThrow(/up to 20 different items/);
+    expect((await getCartView(cartId, "GBP"))?.lines).toHaveLength(20);
+  });
+
   it("requires a finish when the product has options, and rejects options from other products", async () => {
     const cartId = await createCart(null, "GBP");
     await expect(addToCart(cartId, { productId: classicId, quantity: 1 })).rejects.toThrow(/Choose a finish/);
